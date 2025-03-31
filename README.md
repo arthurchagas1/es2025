@@ -9,6 +9,9 @@ O jogo contará com a exploração detalhada do prédio do ICEx, permitindo ao j
 
 ## Equipe
 Arthur B. [Full-Stack]
+
 Arthur C. [Front-End]
+
 Pedro [Back-End]
+
 Yan [Full-Stack]
