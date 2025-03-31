@@ -1,2 +1,2 @@
-# es2025
+# ScruMigos
 Practical activity
