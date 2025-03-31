@@ -13,7 +13,11 @@ O jogo contará com a exploração detalhada do prédio do ICEx, permitindo ao j
 - Pedro Augusto Torres Bento [Back-End]
 - Yan Aquino Amorim [Full-Stack]
 
-As tarefas foram distribuídas com base no planejamento do sprint, utilizando o método de Planning Poker para atribuição de Story Points. Cada membro da equipe recebeu tarefas proporcionais à sua experiência e ao nível de complexidade das atividades, garantindo um equilíbrio na carga de trabalho.
+### Tecnologias
+- Linguagem: Python
+- Framework: Pygame
+- Front/Back: Flask
+- BD: SQLite
 
 ### Backlog do Produto
 - **Como jogador, eu gostaria de controlar o personagem com as teclas de direção (esquerda, direita, pular).**
@@ -29,6 +33,8 @@ As tarefas foram distribuídas com base no planejamento do sprint, utilizando o 
 - **Como desenvolvedor, eu gostaria de ter uma tela de pause para que o jogador possa interromper o jogo.**
 - **Como administrador, eu gostaria de gerenciar os níveis do jogo, incluindo a criação e exclusão de níveis.**
 - **Como administrador, eu gostaria de poder monitorar o desempenho do jogo, como o tempo de carregamento e a estabilidade.**
+
+As tarefas foram distribuídas com base no planejamento do sprint, utilizando o método de Planning Poker para atribuição de Story Points. Cada membro da equipe recebeu tarefas proporcionais à sua experiência e ao nível de complexidade das atividades, garantindo um equilíbrio na carga de trabalho.
 
 ### Backlog do Sprint
 #### Estrutura:
