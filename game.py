@@ -1,24 +1,57 @@
 import pygame
 import sys
+import os
 
-# Inicialização do pygame
 pygame.init()
 
-# Configurações da janela do jogo
+# Configurações de tela
 LARGURA = 1200
 ALTURA = 800
 tela = pygame.display.set_mode((LARGURA, ALTURA))
-pygame.display.set_caption("Jogo 2D Estilo Undertale - Principal")
+pygame.display.set_caption("Jogo 2D - Personagem Animado (10x Menor)")
 
-# Definição de cores
+# Cores
 BRANCO = (255, 255, 255)
-VERMELHO = (255, 0, 0)
 CINZA = (100, 100, 100)
 
-# Controle de FPS
 clock = pygame.time.Clock()
 
-# Classe do obstáculo
+# -------------- CARREGANDO AS IMAGENS ANIMADAS --------------
+
+def load_animation_frames(folder="animacoes", scale_factor=0.1):
+    """
+    Carrega os 16 frames salvos na pasta 'animacoes', redimensiona cada um deles para
+    que o personagem seja 10x menor e os organiza por direção.
+    
+    Assumindo que a organização seja:
+      - Linha 0: Movimento para "baixo" (frames 0 a 3)
+      - Linha 1: Movimento para "esquerda" (frames 4 a 7)
+      - Linha 2: Movimento para "direita" (frames 8 a 11)
+      - Linha 3: Movimento para "cima" (frames 12 a 15)
+    """
+    frames = []
+    for i in range(16):
+        path = os.path.join(folder, f"frame_{i}.png")
+        img = pygame.image.load(path).convert_alpha()
+        # Redimensiona a imagem para 10x menor
+        orig_width, orig_height = img.get_size()
+        scaled_img = pygame.transform.scale(img, (int(orig_width * scale_factor), int(orig_height * scale_factor)))
+        frames.append(scaled_img)
+
+    frames_down  = frames[0:4]    # linha 0: baixo
+    frames_left  = frames[8:12]    # linha 1: esquerda
+    frames_right = frames[12:16]   # linha 2: direita
+    frames_up    = frames[4:8]  # linha 3: cima
+
+    return {
+        "down":  frames_down,
+        "left":  frames_left,
+        "right": frames_right,
+        "up":    frames_up
+    }
+
+# -------------- CRIAÇÃO DOS OBSTÁCULOS --------------
+
 class Obstaculo(pygame.sprite.Sprite):
     def __init__(self, x, y, largura, altura):
         super().__init__()
@@ -27,46 +60,54 @@ class Obstaculo(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
 
-# Grupo de obstáculos
-grupo_obstaculos = pygame.sprite.Group()
 obstaculo1 = Obstaculo(300, 200, 200, 50)
 obstaculo2 = Obstaculo(700, 500, 50, 200)
 obstaculo3 = Obstaculo(500, 300, 150, 150)
-grupo_obstaculos.add(obstaculo1, obstaculo2, obstaculo3)
+grupo_obstaculos = pygame.sprite.Group(obstaculo1, obstaculo2, obstaculo3)
 
-# Classe do jogador
+# -------------- CRIAÇÃO DO JOGADOR ANIMADO --------------
+
 class Jogador(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, animations):
         super().__init__()
-        # Cria um sprite simples (pode ser substituído por uma imagem)
-        self.image = pygame.Surface((40, 60))
-        self.image.fill(VERMELHO)
-        self.rect = self.image.get_rect()
-        # Posiciona o jogador inicialmente no centro da tela
-        self.rect.center = (LARGURA // 2, ALTURA // 2)
+        self.animations = animations
+        self.current_direction = "down"  # direção inicial
+        self.frame_index = 0
+        self.frame_speed = 0.15  # velocidade de troca de frames
+        self.image = self.animations[self.current_direction][int(self.frame_index)]
+        self.rect = self.image.get_rect(center=(LARGURA // 2, ALTURA // 2))
         self.velocidade = 5
 
     def update(self, teclas, obstaculos):
-        # Guarda a posição anterior para reverter em caso de colisão
+        # Salva a posição anterior, caso haja colisão
         pos_antiga = self.rect.copy()
+        movendo = False
 
-        # Movimenta de acordo com as teclas pressionadas
+        # Detecta movimento e altera a direção
         if teclas[pygame.K_LEFT]:
             self.rect.x -= self.velocidade
-        if teclas[pygame.K_RIGHT]:
+            self.current_direction = "left"
+            movendo = True
+        elif teclas[pygame.K_RIGHT]:
             self.rect.x += self.velocidade
-        if teclas[pygame.K_UP]:
+            self.current_direction = "right"
+            movendo = True
+        elif teclas[pygame.K_UP]:
             self.rect.y -= self.velocidade
-        if teclas[pygame.K_DOWN]:
+            self.current_direction = "up"
+            movendo = True
+        elif teclas[pygame.K_DOWN]:
             self.rect.y += self.velocidade
+            self.current_direction = "down"
+            movendo = True
 
-        # Verifica colisões com os obstáculos e reverte a posição se necessário
-        for obstaculo in obstaculos:
-            if self.rect.colliderect(obstaculo.rect):
+        # Verifica colisão com obstáculos
+        for obs in obstaculos:
+            if self.rect.colliderect(obs.rect):
                 self.rect = pos_antiga
                 break
 
-        # Impede que o jogador saia das bordas da tela
+        # Impede que o personagem saia das bordas da tela
         if self.rect.left < 0:
             self.rect.left = 0
         if self.rect.right > LARGURA:
@@ -76,10 +117,23 @@ class Jogador(pygame.sprite.Sprite):
         if self.rect.bottom > ALTURA:
             self.rect.bottom = ALTURA
 
-# Função para ajustar a posição inicial do jogador se ele spawnar em cima de um obstáculo
+        # Atualiza o frame para animar se estiver se movendo
+        if movendo:
+            self.frame_index += self.frame_speed
+            if self.frame_index >= len(self.animations[self.current_direction]):
+                self.frame_index = 0
+        else:
+            # Se parado, retorna ao primeiro frame da direção
+            self.frame_index = 0
+
+        # Atualiza a imagem com o frame atual
+        self.image = self.animations[self.current_direction][int(self.frame_index)]
+
 def ajustar_posicao_inicial(jogador, obstaculos):
-    # Enquanto houver colisão, move o jogador para cima. Se alcançar o topo, move para a direita.
-    while any(jogador.rect.colliderect(obst.rect) for obst in obstaculos):
+    """
+    Se o jogador nascer em cima de algum obstáculo, move-o para que não haja colisão.
+    """
+    while any(jogador.rect.colliderect(obs.rect) for obs in obstaculos):
         jogador.rect.y -= jogador.velocidade
         if jogador.rect.top <= 0:
             jogador.rect.top = 0
@@ -88,35 +142,30 @@ def ajustar_posicao_inicial(jogador, obstaculos):
                 jogador.rect.right = LARGURA
                 break
 
-# Instancia o jogador e ajusta sua posição caso esteja sobre um obstáculo
-jogador = Jogador()
-ajustar_posicao_inicial(jogador, grupo_obstaculos.sprites())
-todos_sprites = pygame.sprite.Group()
-todos_sprites.add(jogador)
-
-# Função principal do jogo
 def main():
+    # Carrega as animações com o scale_factor definido para reduzir 10x
+    animations = load_animation_frames("animacoes", scale_factor=0.15)
+    jogador = Jogador(animations)
+    ajustar_posicao_inicial(jogador, grupo_obstaculos.sprites())
+    grupo_jogador = pygame.sprite.Group(jogador)
+
     rodando = True
     while rodando:
-        # Limita a 60 FPS
         clock.tick(60)
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 rodando = False
 
-        # Captura o estado do teclado e atualiza o jogador
         teclas = pygame.key.get_pressed()
         jogador.update(teclas, grupo_obstaculos.sprites())
 
-        # Redesenha a tela
         tela.fill(BRANCO)
         grupo_obstaculos.draw(tela)
-        todos_sprites.draw(tela)
+        grupo_jogador.draw(tela)
         pygame.display.flip()
 
     pygame.quit()
     sys.exit()
 
-# Executa o jogo somente se este arquivo for executado diretamente
 if __name__ == "__main__":
     main()
