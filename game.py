@@ -4,20 +4,22 @@ import os
 from typing import List
 import time
 
-
 pygame.init()
 
 # Configurações de tela
 LARGURA = 1200
 ALTURA = 800
 tela = pygame.display.set_mode((LARGURA, ALTURA))
-pygame.display.set_caption("Jogo 2D - Troca de Fase com Transição Suave")
+pygame.display.set_caption("Jogo 2D - Com Placas Interativas")
 
 # Cores
 BRANCO = (255, 255, 255)
 CINZA = (100, 100, 100)
+PRETO = (0, 0, 0)
+VERDE = (0, 255, 0)
 
 clock = pygame.time.Clock()
+fonte = pygame.font.SysFont("Arial", 24)
 
 # -------------- CARREGANDO AS IMAGENS ANIMADAS --------------
 
@@ -30,10 +32,10 @@ def load_animation_frames(folder="animacoes", scale_factor=0.1):
         scaled_img = pygame.transform.scale(img, (int(orig_width * scale_factor), int(orig_height * scale_factor)))
         frames.append(scaled_img)
 
-    frames_down  = frames[0:4]    
-    frames_left  = frames[8:12]   
-    frames_right = frames[12:16]  
-    frames_up    = frames[4:8]    
+    frames_down  = frames[0:4]
+    frames_left  = frames[8:12]
+    frames_right = frames[12:16]
+    frames_up    = frames[4:8]
 
     return {
         "down":  frames_down,
@@ -42,7 +44,7 @@ def load_animation_frames(folder="animacoes", scale_factor=0.1):
         "up":    frames_up
     }
 
-# -------------- OBSTÁCULO --------------
+# -------------- CLASSES DO JOGO --------------
 
 class Obstaculo(pygame.sprite.Sprite):
     def __init__(self, x, y, largura, altura):
@@ -52,7 +54,13 @@ class Obstaculo(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
 
-# -------------- JOGADOR --------------
+class Placa(pygame.sprite.Sprite):
+    def __init__(self, x, y, largura, altura, texto):
+        super().__init__()
+        self.image = pygame.Surface((largura, altura))
+        self.image.fill(VERDE)
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.texto = texto
 
 class Jogador(pygame.sprite.Sprite):
     def __init__(self, animations):
@@ -119,25 +127,28 @@ def ajustar_posicao_inicial(jogador, obstaculos):
                 jogador.rect.right = LARGURA
                 break
 
-# -------------- MAIN GAME LOOP --------------
+# -------------- MAIN --------------
 
 def main():
     animations = load_animation_frames("animacoes", scale_factor=0.15)
     jogador = Jogador(animations)
 
-    last_transition_time = 0  # controla cooldown
-    transition_cooldown = 1.0  # segundos
-
+    last_transition_time = 0
+    transition_cooldown = 1.0
+    lendo_placa = False
+    texto_da_placa = ""
 
     fases = [
         {
             "obstaculos": [Obstaculo(300, 200, 200, 50)],
+            "placas": [Placa(600, 300, 40, 40, "Bem-vindo à portaria!")],
             "area_transicao": pygame.Rect(0, 0, 1200, 5),
             "transicao_direcao": "top",
             "fundo": pygame.image.load("portaria.png").convert()
         },
         {
             "obstaculos": [Obstaculo(100, 100, 400, 50)],
+            "placas": [Placa(500, 600, 40, 40, "Aqui é o jardim central.")],
             "area_transicao": pygame.Rect(0, 795, 1200, 5),
             "transicao_direcao": "bottom",
             "fundo": pygame.image.load("bolajardim.png").convert()
@@ -153,19 +164,24 @@ def main():
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 rodando = False
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_e:
+                if placa_proxima:
+                    lendo_placa = True
+                    texto_da_placa = placa_proxima.texto
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_RETURN:
+                lendo_placa = False
 
         fase = fases[fase_atual]
         grupo_obstaculos = pygame.sprite.Group(fase["obstaculos"])
+        grupo_placas = pygame.sprite.Group(fase["placas"])
 
         teclas = pygame.key.get_pressed()
-        jogador.update(teclas, grupo_obstaculos.sprites())
+        if not lendo_placa:
+            jogador.update(teclas, grupo_obstaculos.sprites())
 
-        # Verifica transição de fase
         tempo_atual = time.time()
-
         if jogador.rect.colliderect(fase["area_transicao"]) and (tempo_atual - last_transition_time > transition_cooldown):
-            last_transition_time = tempo_atual  # aplica o cooldown
-
+            last_transition_time = tempo_atual
             x_atual = jogador.rect.centerx
             y_atual = jogador.rect.centery
             direcao = fase["transicao_direcao"]
@@ -188,14 +204,33 @@ def main():
 
             ajustar_posicao_inicial(jogador, nova_fase["obstaculos"])
 
-
-        # Desenha fundo, obstáculos e jogador
         tela.blit(fase["fundo"], (0, 0))
         grupo_obstaculos.draw(tela)
+        grupo_placas.draw(tela)
         grupo_jogador.draw(tela)
-
-        # Opcional: desenha área de transição para debug
         pygame.draw.rect(tela, (0, 255, 0), fase["area_transicao"], 2)
+
+        # Verifica se há placa próxima
+        placa_proxima = None
+        for placa in grupo_placas:
+            if jogador.rect.colliderect(placa.rect.inflate(40, 40)):
+                placa_proxima = placa
+                break
+
+        # Exibe prompt
+        if placa_proxima and not lendo_placa:
+            texto = fonte.render("Pressione E para ler a placa", True, PRETO)
+            tela.blit(texto, (jogador.rect.x - 40, jogador.rect.y - 30))
+
+        # Exibe janela de texto da placa
+        if lendo_placa:
+            caixa = pygame.Rect(100, 600, 1000, 150)
+            pygame.draw.rect(tela, BRANCO, caixa)
+            pygame.draw.rect(tela, PRETO, caixa, 3)
+            linhas = texto_da_placa.split("\n")
+            for i, linha in enumerate(linhas):
+                texto_render = fonte.render(linha, True, PRETO)
+                tela.blit(texto_render, (120, 620 + i * 30))
 
         pygame.display.flip()
 
