@@ -1,9 +1,8 @@
 import pygame
 import sys
 import os
-from typing import List
 import time
-
+from typing import List
 
 pygame.init()
 
@@ -11,7 +10,7 @@ pygame.init()
 LARGURA = 1200
 ALTURA = 800
 tela = pygame.display.set_mode((LARGURA, ALTURA))
-pygame.display.set_caption("Jogo 2D - Troca de Fase com Transição Suave")
+pygame.display.set_caption("Jogo 2D - Troca de Fase com Lantern")
 
 # Cores
 BRANCO = (255, 255, 255)
@@ -26,33 +25,25 @@ def load_animation_frames(folder="animacoes", scale_factor=0.1):
     for i in range(16):
         path = os.path.join(folder, f"frame_{i}.png")
         img = pygame.image.load(path).convert_alpha()
-        orig_width, orig_height = img.get_size()
-        scaled_img = pygame.transform.scale(img, (int(orig_width * scale_factor), int(orig_height * scale_factor)))
-        frames.append(scaled_img)
-
-    frames_down  = frames[0:4]    
-    frames_left  = frames[8:12]   
-    frames_right = frames[12:16]  
-    frames_up    = frames[4:8]    
+        ow, oh = img.get_size()
+        scaled = pygame.transform.scale(img, (int(ow * scale_factor), int(oh * scale_factor)))
+        frames.append(scaled)
 
     return {
-        "down":  frames_down,
-        "left":  frames_left,
-        "right": frames_right,
-        "up":    frames_up
+        "down":  frames[0:4],
+        "left":  frames[8:12],
+        "right": frames[12:16],
+        "up":    frames[4:8],
     }
 
-# -------------- OBSTÁCULO --------------
+# -------------- CLASSES --------------
 
 class Obstaculo(pygame.sprite.Sprite):
     def __init__(self, x, y, largura, altura):
         super().__init__()
         self.image = pygame.Surface((largura, altura))
         self.image.fill(CINZA)
-        self.rect = self.image.get_rect()
-        self.rect.topleft = (x, y)
-
-# -------------- JOGADOR --------------
+        self.rect = self.image.get_rect(topleft=(x, y))
 
 class Jogador(pygame.sprite.Sprite):
     def __init__(self, animations):
@@ -61,12 +52,12 @@ class Jogador(pygame.sprite.Sprite):
         self.current_direction = "down"
         self.frame_index = 0
         self.frame_speed = 0.15
-        self.image = self.animations[self.current_direction][int(self.frame_index)]
+        self.image = animations[self.current_direction][0]
         self.rect = self.image.get_rect(center=(LARGURA // 2, ALTURA // 2))
         self.velocidade = 5
 
-    def update(self, teclas, obstaculos):
-        pos_antiga = self.rect.copy()
+    def update(self, teclas, obstaculos: List[Obstaculo]):
+        old_rect = self.rect.copy()
         movendo = False
 
         if teclas[pygame.K_LEFT]:
@@ -88,29 +79,21 @@ class Jogador(pygame.sprite.Sprite):
 
         for obs in obstaculos:
             if self.rect.colliderect(obs.rect):
-                self.rect = pos_antiga
+                self.rect = old_rect
                 break
 
-        if self.rect.left < 0:
-            self.rect.left = 0
-        if self.rect.right > LARGURA:
-            self.rect.right = LARGURA
-        if self.rect.top < 0:
-            self.rect.top = 0
-        if self.rect.bottom > ALTURA:
-            self.rect.bottom = ALTURA
+        # Limita o jogador dentro da tela
+        self.rect.clamp_ip(pygame.Rect(0, 0, LARGURA, ALTURA))
 
         if movendo:
-            self.frame_index += self.frame_speed
-            if self.frame_index >= len(self.animations[self.current_direction]):
-                self.frame_index = 0
+            self.frame_index = (self.frame_index + self.frame_speed) % len(self.animations[self.current_direction])
         else:
             self.frame_index = 0
 
         self.image = self.animations[self.current_direction][int(self.frame_index)]
 
-def ajustar_posicao_inicial(jogador, obstaculos):
-    while any(jogador.rect.colliderect(obs.rect) for obs in obstaculos):
+def ajustar_posicao_inicial(jogador: Jogador, obstaculos: List[Obstaculo]):
+    while any(jogador.rect.colliderect(o.rect) for o in obstaculos):
         jogador.rect.y -= jogador.velocidade
         if jogador.rect.top <= 0:
             jogador.rect.top = 0
@@ -125,20 +108,19 @@ def main():
     animations = load_animation_frames("animacoes", scale_factor=0.15)
     jogador = Jogador(animations)
 
-    last_transition_time = 0  # controla cooldown
+    last_transition_time = 0.0
     transition_cooldown = 1.0  # segundos
-
 
     fases = [
         {
             "obstaculos": [Obstaculo(300, 200, 200, 50)],
-            "area_transicao": pygame.Rect(0, 0, 1200, 5),
+            "area_transicao": pygame.Rect(0, 0, LARGURA, 5),
             "transicao_direcao": "top",
             "fundo": pygame.image.load("portaria.png").convert()
         },
         {
             "obstaculos": [Obstaculo(100, 100, 400, 50)],
-            "area_transicao": pygame.Rect(0, 795, 1200, 5),
+            "area_transicao": pygame.Rect(0, ALTURA-5, LARGURA, 5),
             "transicao_direcao": "bottom",
             "fundo": pygame.image.load("bolajardim.png").convert()
         }
@@ -146,6 +128,8 @@ def main():
 
     fase_atual = 0
     grupo_jogador = pygame.sprite.Group(jogador)
+
+    ajustar_posicao_inicial(jogador, fases[0]["obstaculos"])
 
     rodando = True
     while rodando:
@@ -155,48 +139,50 @@ def main():
                 rodando = False
 
         fase = fases[fase_atual]
-        grupo_obstaculos = pygame.sprite.Group(fase["obstaculos"])
+        grupo_obstaculos = pygame.sprite.Group(*fase["obstaculos"])
 
         teclas = pygame.key.get_pressed()
-        jogador.update(teclas, grupo_obstaculos.sprites())
+        jogador.update(teclas, fase["obstaculos"])
 
-        # Verifica transição de fase
-        tempo_atual = time.time()
-
-        if jogador.rect.colliderect(fase["area_transicao"]) and (tempo_atual - last_transition_time > transition_cooldown):
-            last_transition_time = tempo_atual  # aplica o cooldown
-
-            x_atual = jogador.rect.centerx
-            y_atual = jogador.rect.centery
-            direcao = fase["transicao_direcao"]
+        # Transição de fase
+        agora = time.time()
+        if jogador.rect.colliderect(fase["area_transicao"]) and (agora - last_transition_time > transition_cooldown):
+            last_transition_time = agora
+            x0, y0 = jogador.rect.center
+            dir0 = fase["transicao_direcao"]
 
             fase_atual = (fase_atual + 1) % len(fases)
-            nova_fase = fases[fase_atual]
+            nova = fases[fase_atual]
 
-            if direcao == "top":
-                nova_y = ALTURA - jogador.rect.height
-                jogador.rect.midtop = (x_atual, nova_y)
-            elif direcao == "bottom":
-                nova_y = 0
-                jogador.rect.midbottom = (x_atual, nova_y)
-            elif direcao == "left":
-                nova_x = LARGURA - jogador.rect.width
-                jogador.rect.midleft = (nova_x, y_atual)
-            elif direcao == "right":
-                nova_x = 0
-                jogador.rect.midright = (nova_x, y_atual)
+            if dir0 == "top":
+                y_new = ALTURA - jogador.rect.height
+                jogador.rect.midtop = (x0, y_new)
+            elif dir0 == "bottom":
+                jogador.rect.midbottom = (x0, 0)
+            elif dir0 == "left":
+                jogador.rect.midleft = (LARGURA - jogador.rect.width, y0)
+            elif dir0 == "right":
+                jogador.rect.midright = (0, y0)
 
-            ajustar_posicao_inicial(jogador, nova_fase["obstaculos"])
+            ajustar_posicao_inicial(jogador, nova["obstaculos"])
 
-
-        # Desenha fundo, obstáculos e jogador
+        # Desenha cena
         tela.blit(fase["fundo"], (0, 0))
         grupo_obstaculos.draw(tela)
         grupo_jogador.draw(tela)
+        pygame.draw.rect(tela, (0,255,0), fase["area_transicao"], 2)  # debug
 
-        # Opcional: desenha área de transição para debug
-        pygame.draw.rect(tela, (0, 255, 0), fase["area_transicao"], 2)
+        # Lantern: tudo fora do raio fica preto
+        light = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        light.fill((0, 0, 0, 255))
+        radius = 200
+        max_dark = 180
+        cx, cy = jogador.rect.center
+        for r in range(radius, 0, -1):
+            alpha = int(max_dark * (r / radius))
+            pygame.draw.circle(light, (0, 0, 0, alpha), (cx, cy), r)
 
+        tela.blit(light, (0, 0))
         pygame.display.flip()
 
     pygame.quit()
