@@ -5,7 +5,7 @@ pygame.init()
 # Define um modo de vídeo mínimo para permitir o uso de convert_alpha()
 pygame.display.set_mode((1, 1))
 
-def extrair_sprites(sheet_path, rows=4, cols=4, save_folder="animacoes"):
+def extrair_sprites(sheet_path, rows=4, cols=4, save_folder="animacoes2"):
     """
     Extrai os sprites de uma sprite sheet e os salva em uma pasta.
     
@@ -48,6 +48,6 @@ def extrair_sprites(sheet_path, rows=4, cols=4, save_folder="animacoes"):
 
 if __name__ == "__main__":
     # Substitua "personagem.png" pelo nome do seu arquivo de sprite sheet, se necessário
-    sprite_sheet = "personagem.png"
+    sprite_sheet = "natalie.png"
     extrair_sprites(sprite_sheet)
     pygame.quit()
