@@ -21,14 +21,12 @@ except pygame.error as e:
 
 # ─── CONSTANTES ─────────────────────────────────────
 WIDTH, HEIGHT = 1200, 800
-BRANCO        = (255, 255, 255)
-PRETO         = (  0,   0,   0)
-MARROM        = (139,  69,  19)
-BTN_NORMAL    = (240, 240, 240)
-BTN_HOVER     = (200, 200, 200)
-PIXEL_FONT    = "/home/pedro/es2025/fonts/PressStart2P-Regular.ttf"
+BRANCO, PRETO  = (255,255,255), (0,0,0)
+MARROM         = (139,69,19)
+BTN_NORMAL     = (240,240,240)
+BTN_HOVER      = (200,200,200)
+PIXEL_FONT     = "/home/pedro/es2025/fonts/PressStart2P-Regular.ttf"  # ajuste se necessário
 
-# ------------------ JANELA ------------------ #
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("ICEx Odissey")
 clock = pygame.time.Clock()
@@ -185,5 +183,8 @@ def tela_menu():
 
 # ─── LOOP PRINCIPAL ─────────────────────────────────
 if __name__ == "__main__":
-    tela_menu()
-    game.main()
+    while True:
+        tela_menu()                  # mostra menu inicial
+        result = game.main()         # roda o jogo
+        if result != "menu":         # se o jogo não pediu retorno ao menu, sair
+            break
