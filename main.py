@@ -185,4 +185,4 @@ def tela_menu():
 # ─── LOOP PRINCIPAL ─────────────────────────────────
 if __name__ == "__main__":
     tela_menu()
-    quarto.main()
+    game.main()
