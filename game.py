@@ -51,6 +51,14 @@ def load_npc_sprite(filename,scale=0.25,folder="animacoes2"):
     w,h=img.get_size()
     return pygame.transform.scale(img,(int(w*scale),int(h*scale)))
 
+def load_bg(path:str):
+    """Carrega o PNG/JPG e garante que ocupe toda a janela."""
+    return pygame.transform.scale(
+        pygame.image.load(path).convert(), 
+        (LARGURA, ALTURA)
+    )
+
+
 # ───────────── SPRITES ─────────────
 class Obstaculo(pygame.sprite.Sprite):
     def __init__(self,x,y,w,h):
@@ -81,6 +89,9 @@ class Jogador(pygame.sprite.Sprite):
     def coletar(self,item):
         if item.nome not in [n for n,_ in self.inv]:
             self.inv.append((item.nome,item.image))
+    def remover(self, nome:str):
+        self.inv = [(n, ic) for n, ic in self.inv if n != nome]
+
     def update(self,keys,obs):
         old=self.rect.copy(); moving=False
         if keys[pygame.K_LEFT]:  self.rect.x-=self.speed; self.dir="left";  moving=True
@@ -169,28 +180,60 @@ def main():
     grupo_jog = pygame.sprite.Group(jogador)
 
     natalie_sprite = load_npc_sprite("frame_13.png", scale=1.25)
-    natalie = NPC(LARGURA//2, ALTURA//2, natalie_sprite)
+    natalie = NPC(9*LARGURA/10, 1*ALTURA/10, natalie_sprite)
 
     # área da “Bola do ICEx” (região circular central)
     quest_target = pygame.Rect(LARGURA//2-60, ALTURA//2-60, 120,120)
 
-    fases=[
-        {"fundo":pygame.image.load("portaria.png").convert(),
-         "obstaculos":[Obstaculo(300,200,200,50)],
-         "placas":[Placa(600,300,40,40,"Bem-vindo à portaria!")],
-         "itens":[],
-         "npcs":[],
-         "area_transicao":pygame.Rect(0,0,LARGURA,5),
-         "transicao_direcao":"top"},
-        {"fundo":pygame.image.load("bolajardim.png").convert(),
-         "obstaculos":[Obstaculo(100,100,400,50)],
-         "placas":[Placa(500,600,40,40,"Jardim central do ICEx.")],
-         "itens":[],
-         "npcs":[natalie],
-         "area_transicao":pygame.Rect(0,ALTURA-5,LARGURA,5),
-         "transicao_direcao":"bottom",
-         "quest_target":quest_target}
+    fases = [
+        # 0 ── PORTARIA
+        {
+            "fundo"      : load_bg("portaria.png"),
+            "obstaculos" : [],
+            "placas"     : [],
+            "itens"      : [],
+            "npcs"       : [],
+            "transicoes" : [       # <── NEW LIST
+                { "rect": pygame.Rect(0, 0, LARGURA, 5),               # topo
+                  "dest": 1,        # vai para bolajardim
+                  "spawn_side": "bottom" }
+            ]
+        },
+
+        # 1 ── BOLA/JARDIM
+        {
+            "fundo"      : load_bg("bolajardim.png"),
+            "obstaculos" : [],
+            "placas"     : [],
+            "itens"      : [],
+            "npcs"       : [],
+            "transicoes" : [
+                { "rect": pygame.Rect(0, ALTURA-5, LARGURA, 5),        # base
+                  "dest": 0,        # retorna à portaria
+                  "spawn_side": "top" },
+
+                { "rect": pygame.Rect(0, 0, LARGURA, 5),               # topo
+                  "dest": 2,        # entra em salas1
+                  "spawn_side": "bottom" }
+            ]
+        },
+
+        # 2 ── SALAS 1
+        {
+            "fundo"      : load_bg("salas1.png"),
+            "obstaculos" : [],
+            "placas"     : [],
+            "itens"      : [Item(700, 500, "Caneta")],
+            "npcs"       : [natalie],
+            "quest_target": quest_target,
+            "transicoes" : [
+                { "rect": pygame.Rect(0, ALTURA-5, LARGURA, 5),        # base
+                  "dest": 1,        # volta para bolajardim
+                  "spawn_side": "top" }
+            ]
+        }
     ]
+
     fase_idx=0
     ajustar_posicao_inicial(jogador,fases[0]["obstaculos"])
 
@@ -221,22 +264,30 @@ def main():
                     lendo_placa=False
                 # NPC natalie
                 if ev.key==pygame.K_e and npc_prox and not npc_prox.ativo and not lendo_placa:
-                    if quest_state=="not_started":
-                        falas=["Socorro? Precisa de caneta?",
-                               "Faça o seguinte:",
-                               "Tire uma foto na bola do ICEx 📸",
-                               "Volte aqui depois!"]
+                    if quest_state == "not_started":
+                        falas = [
+                            "Natalie! Quee bom que você está aqui, tenho uma prova agora, preciso muito de uma caneta emprestada…",
+                            "Oi meu amor, eu tenho uma caneta da boa bem aqui, mas antes, preciso que você me ajude, tire uma foto bem bonita na bola do ICEx 📸",
+                            "Depois, volte aqui e me mostre!",
+                            "Ok, vou tirar a foto e já volto!",
+                            "Ah, e não esquece de pegar a câmera na minha mochila!"]
                         npc_prox.iniciar_dialogo(falas)
-                        quest_state="in_progress"
+                        jogador.coletar(Item(0, 0, "Camera"))   # ← NOVO ITEM
+                        quest_state = "in_progress"
+
                     elif quest_state=="in_progress":
                         npc_prox.iniciar_dialogo(["Ainda não tirou a foto!"])
-                    elif quest_state=="photo_taken":
-                        falas=["Uau, ficou ótima!",
-                               "Aqui está sua caneta 🖊️",
-                               "Boa prova!"]
+                    elif quest_state == "photo_taken":
+                        falas = [
+                            "Uau, ficou ótima!",
+                            "Aqui está sua caneta 🖊️",
+                            "Boa prova!"
+                        ]
                         npc_prox.iniciar_dialogo(falas)
-                        jogador.coletar(Item(0,0,"Caneta"))
-                        quest_state="done"
+                        jogador.remover("Camera")               # ← PERDE câmera
+                        jogador.coletar(Item(0, 0, "Caneta"))   # ← GANHA caneta
+                        quest_state = "done"
+
                     else:
                         npc_prox.iniciar_dialogo(["Boa sorte na prova!"])
                 elif ev.key==pygame.K_RETURN and npc_prox and npc_prox.ativo:
@@ -263,13 +314,32 @@ def main():
                 evento_timer=time.time()
 
         # transição de fase
-        agora=time.time()
-        if jogador.rect.colliderect(fase["area_transicao"]) and agora-last_transition>transition_cd:
-            last_transition=agora; x0,y0=jogador.rect.center; dir0=fase["transicao_direcao"]
-            fase_idx=(fase_idx+1)%len(fases); nova=fases[fase_idx]
-            if dir0=="top": jogador.rect.midtop=(x0,ALTURA-jogador.rect.height)
-            elif dir0=="bottom": jogador.rect.midbottom=(x0,0)
-            ajustar_posicao_inicial(jogador,nova["obstaculos"])
+        # ──────── TRANSIÇÕES ENTRE FASES ────────
+        agora = time.time()
+        # linhas verdes só para depuração – apague se quiser
+        for tdata in fase["transicoes"]:
+            pygame.draw.rect(tela, (0, 255, 0), tdata["rect"], 2)
+            if jogador.rect.colliderect(tdata["rect"]) and agora - last_transition > transition_cd:
+                last_transition = agora
+
+                # índice do próximo mapa
+                fase_idx = tdata["dest"]
+                next_fase = fases[fase_idx]
+
+                # onde o jogador deve aparecer no mapa de destino
+                cx, cy = jogador.rect.center
+                side = tdata["spawn_side"]
+                if side == "top":
+                    jogador.rect.midtop = (cx, 0)
+                elif side == "bottom":
+                    jogador.rect.midbottom = (cx, ALTURA)
+                elif side == "left":
+                    jogador.rect.midleft = (0, cy)
+                elif side == "right":
+                    jogador.rect.midright = (LARGURA, cy)
+
+                ajustar_posicao_inicial(jogador, next_fase["obstaculos"])
+                break         # evita múltiplas transições de uma vez
 
         # quiz
         if quiz_pending:
@@ -281,7 +351,6 @@ def main():
         tela.blit(fase["fundo"],(0,0))
         grupo_obs.draw(tela); grupo_itm.draw(tela)
         grupo_pla.draw(tela); grupo_npc.draw(tela); grupo_jog.draw(tela)
-        pygame.draw.rect(tela,(0,255,0),fase["area_transicao"],2)
 
         # highlight quest target (debug / feedback)
         if quest_state=="in_progress" and "quest_target" in fase:
