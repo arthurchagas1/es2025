@@ -1,5 +1,4 @@
 import warnings
-import quarto
 warnings.filterwarnings(
     "ignore",
     message=r"Your system is avx2 capable.*",
@@ -26,7 +25,7 @@ BRANCO, PRETO  = (255,255,255), (0,0,0)
 MARROM         = (139,69,19)
 BTN_NORMAL     = (240,240,240)
 BTN_HOVER      = (200,200,200)
-PIXEL_FONT     = "/home/pedro/es2025/fonts/PressStart2P-Regular.ttf"  # ajuste se necessário
+PIXEL_FONT     = "PressStart2P.ttf"  # ajuste se necessário
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("ICEx Odissey")

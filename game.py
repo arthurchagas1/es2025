@@ -9,11 +9,11 @@ LARGURA, ALTURA = 1200, 800
 tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("Jogo 2D – itens + quiz")
 
-BRANCO = (255, 255, 255)
-CINZA  = (100, 100, 100)
-PRETO  = (  0,   0,   0)
-VERDE  = (  0, 255,   0)
-AZUL_CLARO = (150, 200, 255)
+BRANCO       = (255, 255, 255)
+CINZA        = (100, 100, 100)
+PRETO        = (  0,   0,   0)
+VERDE        = (  0, 255,   0)
+AZUL_CLARO   = (150, 200, 255)
 
 fonte      = pygame.font.SysFont("Arial", 24)
 fonte_hud  = pygame.font.SysFont("Arial", 20)   # dica Esc
@@ -31,7 +31,7 @@ def load_item_image(nome, size=(40, 40)):
     path = os.path.join("itens", f"{nome}.png")
     if os.path.exists(path):
         return pygame.transform.scale(pygame.image.load(path).convert_alpha(), size)
-    # fallback
+    # fallback: quadradinho amarelo com inicial
     surf = pygame.Surface(size, pygame.SRCALPHA)
     surf.fill((255, 255, 0))
     letter = fonte.render(nome[0].upper(), True, PRETO)
@@ -42,7 +42,14 @@ def load_icon(path, color):
     if os.path.exists(path):
         return pygame.transform.scale(pygame.image.load(path).convert_alpha(), (40,40))
     surf = pygame.Surface((40,40), pygame.SRCALPHA)
-    surf.fill(color); return surf
+    surf.fill(color)
+    return surf
+
+# ────── NOVO: sprite único para NPCs ──────
+def load_npc_sprite(filename, scale=0.25, folder="animacoes2"):
+    img = pygame.image.load(os.path.join(folder, filename)).convert_alpha()
+    w, h = img.get_size()
+    return pygame.transform.scale(img, (int(w*scale), int(h*scale)))
 
 ICON_OK   = load_icon("ok.png",   (0,255,0))
 ICON_FAIL = load_icon("fail.png", (255,0,0))
@@ -101,6 +108,25 @@ class Jogador(pygame.sprite.Sprite):
 
         self.idx = (self.idx+0.15) % len(self.anim[self.dir]) if moving else 0
         self.image = self.anim[self.dir][int(self.idx)]
+
+# ────── NOVA CLASSE NPC ──────
+class NPC(pygame.sprite.Sprite):
+    def __init__(self, x, y, image, falas: list[str]):
+        super().__init__()
+        self.image  = image
+        self.rect   = self.image.get_rect(center=(x, y))
+        self.falas  = falas
+        self.idx    = 0
+        self.ativo  = False
+
+    def iniciar_dialogo(self):
+        self.idx  = 0
+        self.ativo = True
+
+    def avancar_dialogo(self):
+        self.idx += 1
+        if self.idx >= len(self.falas):
+            self.ativo = False
 
 # ─────────────── INVENTÁRIO HUD ───────────────
 def desenhar_inventario(surface, inv):
@@ -174,17 +200,26 @@ def main():
     jogador=Jogador(anim)
     grupo_jog=pygame.sprite.Group(jogador)
 
+    # ────── INSTÂNCIA DA NATALIE ──────
+    natalie_sprite = load_npc_sprite("frame_13.png")
+    natalie = NPC(LARGURA//2, ALTURA//2, natalie_sprite,
+                 ["Oi! Eu sou a Natalie 😊.",
+                  "Fazendo um tour pelo ICEx?",
+                  "Boa sorte na sua jornada!"])
+
     fases=[
         {"fundo":pygame.image.load("portaria.png").convert(),
          "obstaculos":[Obstaculo(300,200,200,50)],
          "placas":[Placa(600,300,40,40,"Bem-vindo à portaria!")],
          "itens":[Item(400,500,"Chave")],
+         "npcs":[],
          "area_transicao":pygame.Rect(0,0,LARGURA,5),
          "transicao_direcao":"top"},
         {"fundo":pygame.image.load("bolajardim.png").convert(),
          "obstaculos":[Obstaculo(100,100,400,50)],
          "placas":[Placa(500,600,40,40,"Aqui é o jardim central.")],
          "itens":[],
+         "npcs":[natalie],
          "area_transicao":pygame.Rect(0,ALTURA-5,LARGURA,5),
          "transicao_direcao":"bottom"}
     ]
@@ -193,6 +228,7 @@ def main():
 
     lendo_placa=False; texto_placa=""
     placa_prox=None
+    npc_prox=None
     quiz_pending=False
     evento_txt=""; evento_timer=0
     transition_cd,last_transition=1.0,0
@@ -218,10 +254,17 @@ def main():
                     break
 
             if ev.type==pygame.KEYDOWN:
-                if ev.key==pygame.K_e and placa_prox:
+                # interagir com placa
+                if ev.key==pygame.K_e and placa_prox and not npc_prox:
                     lendo_placa=True; texto_placa=placa_prox.texto
                 if ev.key==pygame.K_RETURN and lendo_placa:
                     lendo_placa=False
+                # interagir com NPC
+                if ev.key==pygame.K_e and npc_prox and not npc_prox.ativo and not lendo_placa:
+                    npc_prox.iniciar_dialogo()
+                elif ev.key==pygame.K_RETURN and npc_prox and npc_prox.ativo:
+                    npc_prox.avancar_dialogo()
+                # quiz
                 if ev.key==pygame.K_q:
                     quiz_pending=True
 
@@ -232,9 +275,10 @@ def main():
         grupo_obs = pygame.sprite.Group(*fase["obstaculos"])
         grupo_pla = pygame.sprite.Group(*fase["placas"])
         grupo_itm = pygame.sprite.Group(*fase["itens"])
+        grupo_npc = pygame.sprite.Group(*fase["npcs"])
 
         keys=pygame.key.get_pressed()
-        if not lendo_placa and not quiz_pending:
+        if not lendo_placa and not quiz_pending and not (npc_prox and npc_prox.ativo):
             jogador.update(keys, fase["obstaculos"])
 
         # coletar item
@@ -265,19 +309,37 @@ def main():
 
         # ────────── DRAW ──────────
         tela.blit(fase["fundo"],(0,0))
-        grupo_obs.draw(tela); grupo_itm.draw(tela); grupo_pla.draw(tela); grupo_jog.draw(tela)
+        grupo_obs.draw(tela)
+        grupo_itm.draw(tela)
+        grupo_pla.draw(tela)
+        grupo_npc.draw(tela)
+        grupo_jog.draw(tela)
         pygame.draw.rect(tela,(0,255,0),fase["area_transicao"],2)
 
-        placa_prox=next((p for p in grupo_pla if jogador.rect.colliderect(p.rect.inflate(40,40))),None)
-        if placa_prox and not lendo_placa:
-            tela.blit(fonte.render("Pressione E para ler a placa",True,PRETO),
+        # proximidades
+        placa_prox = next((p for p in grupo_pla
+                           if jogador.rect.colliderect(p.rect.inflate(40,40))), None)
+        npc_prox   = next((n for n in grupo_npc
+                           if jogador.rect.colliderect(n.rect.inflate(50,50))), None)
+
+        if (placa_prox or npc_prox) and not lendo_placa and not (npc_prox and npc_prox.ativo):
+            tela.blit(fonte.render("Pressione E para interagir",True,PRETO),
                       (jogador.rect.x-40,jogador.rect.y-30))
 
+        # placa
         if lendo_placa:
             caixa=pygame.Rect(100,600,1000,150)
             pygame.draw.rect(tela,BRANCO,caixa); pygame.draw.rect(tela,PRETO,caixa,3)
             for i,linha in enumerate(texto_placa.split("\\n")):
                 tela.blit(fonte.render(linha,True,PRETO),(120,620+i*30))
+
+        # diálogo NPC
+        if npc_prox and npc_prox.ativo:
+            caixa = pygame.Rect(80, 580, 1040, 160)
+            pygame.draw.rect(tela, BRANCO, caixa)
+            pygame.draw.rect(tela, PRETO,  caixa, 3)
+            linha = npc_prox.falas[npc_prox.idx]
+            tela.blit(fonte.render(linha, True, PRETO), (caixa.x + 20, caixa.y + 40))
 
         desenhar_inventario(tela,jogador.inv)
 
