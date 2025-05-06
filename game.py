@@ -1,8 +1,6 @@
 import pygame, sys, os, time, random
 from typing import List
 
-
-
 pygame.init()
 clock = pygame.time.Clock()
 
@@ -18,10 +16,10 @@ AZUL_CLARO      = (150,200,255)
 # ────── FONTE PIXEL ──────
 PIXEL_FONT = "fonts/PressStart2P-Regular.ttf"   # ajuste se necessário
 try:
-    fonte_dialog = pygame.font.Font(PIXEL_FONT, 40)
+    fonte_dialog = pygame.font.Font(PIXEL_FONT, 20)
 except FileNotFoundError:
     print("⚠️  Fonte PressStart2P não encontrada – usando sistema.")
-    fonte_dialog = pygame.font.Font(None, 40)
+    fonte_dialog = pygame.font.Font(None, 20)
 
 fonte_hud = pygame.font.SysFont("Arial", 20)    # apenas HUD (inventário, ESC)
 
@@ -238,7 +236,14 @@ def ajustar_posicao_inicial(j,obs):
 
 # ─────────────────────────────────────────────
 def main():
-
+    # Controle da visibilidade e animação do inventário
+    inv_visible    = False
+    # Calculamos o tamanho do painel (mesmo que em desenhar_inventario)
+    SLOT_SIZE      = 48
+    PADDING        = 16
+    TOTAL_SLOTS    = 5
+    panel_w = TOTAL_SLOTS * SLOT_SIZE + (TOTAL_SLOTS + 1) * PADDING
+    panel_h = SLOT_SIZE + inv_font.get_height() + 3 + 2 * PADDING
 
     # posição X fixa (centro)
     inv_x0 = (LARGURA - panel_w) // 2
@@ -282,7 +287,6 @@ def main():
             "placas"     : [],
             "itens"      : [],
             "npcs"       : [],
-            "quest_target": quest_target,
             "transicoes" : [
                 { "rect": pygame.Rect(0, ALTURA-5, LARGURA, 5),        # base
                   "dest": 0,        # retorna à portaria
@@ -301,6 +305,7 @@ def main():
             "placas"     : [],
             "itens"      : [Item(700, 500, "Caneta")],
             "npcs"       : [natalie],
+            "quest_target": quest_target,
             "transicoes" : [
                 { "rect": pygame.Rect(0, ALTURA-5, LARGURA, 5),        # base
                   "dest": 1,        # volta para bolajardim
@@ -341,8 +346,8 @@ def main():
                 if ev.key==pygame.K_e and npc_prox and not npc_prox.ativo and not lendo_placa:
                     if quest_state == "not_started":
                         falas = [
-                            "Natalie! Que bom que você está aqui, tenho uma prova agora,\n preciso muito de uma caneta emprestada…",
-                            "Oi meu amor, eu tenho uma caneta da boa bem aqui, mas antes,\n preciso que você me ajude, tire uma foto bem bonita\n na bola do ICEx 📸",
+                            "Natalie! Quee bom que você está aqui, tenho uma prova agora, preciso muito de uma caneta emprestada…",
+                            "Oi meu amor, eu tenho uma caneta da boa bem aqui, mas antes, preciso que você me ajude, tire uma foto bem bonita na bola do ICEx 📸",
                             "Depois, volte aqui e me mostre!",
                             "Ok, vou tirar a foto e já volto!",
                             "Ah, e não esquece de pegar a câmera na minha mochila!"]
@@ -382,18 +387,11 @@ def main():
             jogador.update(keys,fase["obstaculos"])
 
         # quest: checar foto
-        # ─────── QUEST: tirar a foto manualmente ───────
-        dentro_area_foto = (
-            quest_state == "in_progress"
-            and "quest_target" in fase
-            and jogador.rect.colliderect(fase["quest_target"])
-        )
-
-        if dentro_area_foto and keys[pygame.K_f]:
-            quest_state = "photo_taken"
-            evento_txt = "📸 Foto tirada! Volte para Natalie."
-            evento_timer = time.time()
-
+        if quest_state=="in_progress" and "quest_target" in fase:
+            if jogador.rect.colliderect(fase["quest_target"]):
+                quest_state="photo_taken"
+                evento_txt="📸 Foto tirada! Volte para Natalie."
+                evento_timer=time.time()
 
         # transição de fase
         # ──────── TRANSIÇÕES ENTRE FASES ────────
@@ -441,35 +439,9 @@ def main():
         placa_prox=next((p for p in grupo_pla if jogador.rect.colliderect(p.rect.inflate(40,40))),None)
         npc_prox  =next((n for n in grupo_npc if jogador.rect.colliderect(n.rect.inflate(50,50))),None)
 
-        # -------- prompt de interação --------
         if (placa_prox or npc_prox) and not lendo_placa and not (npc_prox and npc_prox.ativo):
-            txt = "Pressione E para interagir"
-            surf_txt  = fonte_dialog.render(txt, True, PRETO)
-            w, h      = surf_txt.get_size()
-            bg_rect   = pygame.Rect(0, 0, w + 20, h + 10)
-            bg_rect.midbottom = (jogador.rect.centerx, jogador.rect.y - 10)
-            
-            box = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
-            box.fill((255, 255, 255, 200))
-            tela.blit(box, bg_rect.topleft)
-            pygame.draw.rect(tela, PRETO, bg_rect, 2)
-            tela.blit(surf_txt, (bg_rect.x + 10, bg_rect.y + 5))
-            
-        # -------- dica de foto (quando dentro da área) --------
-        if dentro_area_foto:
-            txt = "Pressione F para tirar foto"
-            surf_txt = fonte_dialog.render(txt, True, PRETO)
-            w, h = surf_txt.get_size()
-            bg_rect = pygame.Rect(0, 0, w + 20, h + 10)
-            bg_rect.midbottom = (jogador.rect.centerx, jogador.rect.y - 50)
-
-            box = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
-            box.fill((255, 255, 255, 200))
-            tela.blit(box, bg_rect.topleft)
-            pygame.draw.rect(tela, PRETO, bg_rect, 2)
-            tela.blit(surf_txt, (bg_rect.x + 10, bg_rect.y + 5))
-
-
+            tela.blit(fonte_dialog.render("Pressione E para interagir",True,PRETO),
+                      (jogador.rect.x-80,jogador.rect.y-40))
 
         # placa
         if lendo_placa:
@@ -477,18 +449,15 @@ def main():
             tela.blit(pygame.transform.scale(WOOD_IMG,(caixa.width,caixa.height)),caixa.topleft)
             pygame.draw.rect(tela,PRETO,caixa,3)
             for i,linha in enumerate(texto_placa.split("\\n")):
-                tela.blit(fonte_dialog.render(linha,True,PRETO),(caixa.x + 20, caixa.y + 20 + i * 30))
+                tela.blit(fonte_dialog.render(linha,True,PRETO),(120,620+i*28))
 
         # npc diálogo
         if npc_prox and npc_prox.ativo:
             caixa=pygame.Rect(80,580,1040,160)
             tela.blit(pygame.transform.scale(WOOD_IMG,(caixa.width,caixa.height)),caixa.topleft)
             pygame.draw.rect(tela,PRETO,caixa,3)
-            linha = npc_prox.falas[npc_prox.idx]
-            for i, parte in enumerate(linha.split("\n")):
-                tela.blit(fonte_dialog.render(parte, True, PRETO),
-                        (caixa.x + 20, caixa.y + 20 + i * 30))  # adjust spacing for large font
-
+            linha=npc_prox.falas[npc_prox.idx]
+            tela.blit(fonte_dialog.render(linha,True,PRETO),(caixa.x+20,caixa.y+50))
 
         desenhar_inventario(tela,jogador.inv)
 
