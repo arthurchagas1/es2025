@@ -1,6 +1,6 @@
 import pygame
 import sys
-import game  # Importa o arquivo main.py para iniciar o jogo principal
+import quarto   # agora importa o arquivo quarto.py
 
 # Inicialização do pygame
 pygame.init()
@@ -18,7 +18,7 @@ clock = pygame.time.Clock()
 
 # Criação de fontes para os textos
 font_titulo = pygame.font.Font(None, 74)
-font_start = pygame.font.Font(None, 50)
+font_start  = pygame.font.Font(None, 50)
 
 def tela_inicial():
     iniciar = False
@@ -28,9 +28,8 @@ def tela_inicial():
                 pygame.quit()
                 sys.exit()
             # Usa a tecla Enter ou clique do mouse para iniciar o jogo
-            if evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_RETURN:
-                    iniciar = True
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_RETURN:
+                iniciar = True
             if evento.type == pygame.MOUSEBUTTONDOWN:
                 iniciar = True
 
@@ -39,11 +38,11 @@ def tela_inicial():
         
         # Renderiza o título e o texto do start
         titulo_texto = font_titulo.render("Meu Jogo", True, PRETO)
-        start_texto = font_start.render("Pressione Enter para iniciar", True, PRETO)
+        start_texto  = font_start.render("Pressione Enter para iniciar", True, PRETO)
         
         # Centraliza os textos
         titulo_rect = titulo_texto.get_rect(center=(WIDTH/2, HEIGHT/3))
-        start_rect = start_texto.get_rect(center=(WIDTH/2, HEIGHT/2))
+        start_rect  = start_texto.get_rect(center=(WIDTH/2, HEIGHT/2))
         
         screen.blit(titulo_texto, titulo_rect)
         screen.blit(start_texto, start_rect)
@@ -54,5 +53,5 @@ def tela_inicial():
 # Executa a tela inicial
 tela_inicial()
 
-# Após sair da tela inicial, inicia o jogo principal (main.py)
-game.main()
+# Após sair da tela inicial, inicia o conteúdo do quarto.py
+quarto.main()
