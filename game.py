@@ -123,40 +123,68 @@ QUESTOES=[
     QuizQuestion("Em que continente fica o Brasil?",["África","Europa","Ásia","América do Sul"],3),
 ]
 
-def run_quiz(surface,font)->bool:
-    perguntas=random.sample(QUESTOES,3); acertos=0
+# --------------------- QUIZ LOOP ---------------------
+def run_quiz(surface, font) -> bool:
+    perguntas = random.sample(QUESTOES, 3)
+    acertos   = 0
+
     for q in perguntas:
-        sel,answered,icon,t0=0,False,None,0
+        selecionada = 0
+        respondida  = False
+        feedback_icon = None
+        feedback_time = 0
+
         while True:
+            # ── events ──
             for e in pygame.event.get():
-                if e.type==pygame.QUIT: pygame.quit(); sys.exit()
-                if e.type==pygame.KEYDOWN and not answered:
-                    if e.key in (pygame.K_UP,pygame.K_w):   sel=(sel-1)%len(q.opts)
-                    elif e.key in (pygame.K_DOWN,pygame.K_s): sel=(sel+1)%len(q.opts)
-                    elif e.key==pygame.K_RETURN:
-                        answered=True; correct=(sel==q.ans)
-                        icon=ICON_OK if correct else ICON_FAIL
-                        if correct: acertos+=1; t0=time.time()
-            surface.fill((30,30,90))
-            surface.blit(font.render(q.q,True,BRANCO),(60,80))
-            for i,opt in enumerate(q.opts):
-                y=200+i*60
-                if i==sel: pygame.draw.rect(surface,AZUL_CLARO,(50,y-5,700,40))
-                surface.blit(font.render(opt,True,BRANCO),(60,y))
-            if answered:
-                surface.blit(icon,(800,200+sel*60))
-                if time.time()-t0>=1: break
-            pygame.display.flip(); clock.tick(60)
-    passou=acertos>=2
-    msg="Parabéns! Você passou." if passou else "Não foi dessa vez..."
-    cor=(0,200,0) if passou else (200,0,0)
-    t0=time.time()
-    while time.time()-t0<2:
+                if e.type == pygame.QUIT:
+                    pygame.quit(); sys.exit()
+                if e.type == pygame.KEYDOWN and not respondida:
+                    if e.key in (pygame.K_UP, pygame.K_w):
+                        selecionada = (selecionada - 1) % len(q.opcoes)
+                    elif e.key in (pygame.K_DOWN, pygame.K_s):
+                        selecionada = (selecionada + 1) % len(q.opcoes)
+                    elif e.key == pygame.K_RETURN:
+                        respondida = True
+                        correta = (selecionada == q.correta)
+                        feedback_icon = ICON_OK if correta else ICON_FAIL
+                        if correta: acertos += 1
+                        feedback_time = time.time()
+
+            # Draw quiz screen
+            surface.fill((30, 30, 90))
+            pergunta_render = font.render(q.pergunta, True, BRANCO)
+            surface.blit(pergunta_render, (60, 80))
+
+            for i, opcao in enumerate(q.opcoes):
+                y = 200 + i*60
+                if i == selecionada:
+                    pygame.draw.rect(surface, AZUL_CLARO, (50, y-5, 700, 40))
+                txt = font.render(opcao, True, BRANCO)
+                surface.blit(txt, (60, y))
+            if respondida:
+                surface.blit(feedback_icon, (800, 200 + selecionada*60))
+                if time.time() - feedback_time >= 1.0:
+                    break
+
+            pygame.display.flip()
+            clock.tick(60)
+
+    # Result screen
+    passou = acertos >= 2
+    msg = "Parabéns! Você passou." if passou else "Não foi dessa vez..."
+    cor = (0, 200, 0) if passou else (200, 0, 0)
+    t0 = time.time()
+    while time.time() - t0 < 2.0:
         for e in pygame.event.get():
-            if e.type==pygame.QUIT: pygame.quit(); sys.exit()
-        surface.fill(PRETO)
-        surface.blit(font.render(msg,True,cor),((LARGURA-300)//2,ALTURA//2))
-        pygame.display.flip(); clock.tick(60)
+            if e.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+        surface.fill((0, 0, 0))
+        txt = font.render(msg, True, cor)
+        surface.blit(txt, ((LARGURA-txt.get_width())//2, ALTURA//2))
+        pygame.display.flip()
+        clock.tick(60)
+
     return passou
 
 # ───────────── POSIÇÃO INICIAL ────────────────
@@ -170,9 +198,9 @@ def ajustar_posicao_inicial(j,obs):
 
 # ───────────────── MAIN LOOP ──────────────────
 def main():
-    anim=load_animation_frames()
-    jogador=Jogador(anim)
-    grupo_jog=pygame.sprite.Group(jogador)
+    animations = load_animation_frames()
+    jogador = Jogador(animations)
+    grupo_jogador = pygame.sprite.Group(jogador)
 
     fases=[
         {"fundo":pygame.image.load("portaria.png").convert(),
@@ -257,16 +285,20 @@ def main():
             elif dir0=="right": jogador.rect.midright  =(0,y0)
             ajustar_posicao_inicial(jogador,nova["obstaculos"])
 
-        # quiz
+        # ------------ Quiz launch ---------------
         if quiz_pending:
-            res=run_quiz(tela,fonte)
-            evento_txt="Evento A: Sucesso!" if res else "Evento B: Falha!"
-            evento_timer=time.time(); quiz_pending=False
+            result = run_quiz(tela, fonte)
+            evento_texto = "Evento A: Sucesso!" if result else "Evento B: Falha!"
+            evento_timer = time.time()
+            quiz_pending = False
 
-        # ────────── DRAW ──────────
-        tela.blit(fase["fundo"],(0,0))
-        grupo_obs.draw(tela); grupo_itm.draw(tela); grupo_pla.draw(tela); grupo_jog.draw(tela)
-        pygame.draw.rect(tela,(0,255,0),fase["area_transicao"],2)
+        # ------------ DRAW ------------
+        tela.blit(fase["fundo"], (0, 0))
+        grupo_obstaculos.draw(tela)
+        grupo_itens.draw(tela)
+        grupo_placas.draw(tela)
+        grupo_jogador.draw(tela)
+        pygame.draw.rect(tela, (0, 255, 0), fase["area_transicao"], 2)
 
         placa_prox=next((p for p in grupo_pla if jogador.rect.colliderect(p.rect.inflate(40,40))),None)
         if placa_prox and not lendo_placa:
