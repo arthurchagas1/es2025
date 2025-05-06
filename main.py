@@ -1,5 +1,4 @@
 import warnings
-import quarto
 warnings.filterwarnings(
     "ignore",
     message=r"Your system is avx2 capable.*",
@@ -26,7 +25,7 @@ BRANCO, PRETO  = (255,255,255), (0,0,0)
 MARROM         = (139,69,19)
 BTN_NORMAL     = (240,240,240)
 BTN_HOVER      = (200,200,200)
-PIXEL_FONT     = "/home/pedro/es2025/fonts/PressStart2P-Regular.ttf"  # ajuste se necessário
+PIXEL_FONT     = "PressStart2P.ttf"  # ajuste se necessário
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("ICEx Odissey")
@@ -184,13 +183,8 @@ def tela_menu():
 
 # ─── LOOP PRINCIPAL ─────────────────────────────────
 if __name__ == "__main__":
-<<<<<<< HEAD
-    tela_menu()
-    quarto.main()
-=======
     while True:
         tela_menu()                  # mostra menu inicial
         result = game.main()         # roda o jogo
         if result != "menu":         # se o jogo não pediu retorno ao menu, sair
             break
->>>>>>> 02da69c02523a59de3624ff50ddcbd8de9cd1a4c
