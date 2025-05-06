@@ -21,7 +21,6 @@ CINZA  = (100, 100, 100)
 clock = pygame.time.Clock()
 
 # —————— FONTE 16-BIT “QUADRADONA” ——————
-# Coloque PressStart2P.ttf na pasta do projeto
 FONT_SIZE   = 32
 PIXEL_FONT  = pygame.font.Font("PressStart2P.ttf", FONT_SIZE)
 
@@ -29,7 +28,7 @@ def render_text_with_border(text: str, fg_color, border_color, border_size=2):
     base = PIXEL_FONT.render(text, True, fg_color)
     w, h = base.get_width() + 2*border_size, base.get_height() + 2*border_size
     surf = pygame.Surface((w, h), pygame.SRCALPHA)
-    # borda
+    # desenha borda
     for dx in (-border_size, 0, border_size):
         for dy in (-border_size, 0, border_size):
             if dx or dy:
@@ -41,8 +40,10 @@ def render_text_with_border(text: str, fg_color, border_color, border_size=2):
 
 # -------------- TEXTURAS --------------
 wood_tex  = pygame.image.load("wood.png").convert()
-bg_quarto = pygame.transform.scale(pygame.image.load("quarto.png").convert(),
-                                   (LARGURA, ALTURA))
+bg_quarto = pygame.transform.scale(
+    pygame.image.load("quarto.png").convert(),
+    (LARGURA, ALTURA)
+)
 
 # -------------- ANIMAÇÕES --------------
 def load_animation_frames(folder="animacoes", scale_factor=0.45):
@@ -119,8 +120,8 @@ def ajustar_posicao_inicial(jogador: Jogador, obstaculos: List[Obstaculo]):
 # -------------- INTRO POPUP --------------
 def show_intro():
     popup_w, popup_h = 800, 300
-    wood   = pygame.transform.scale(wood_tex, (popup_w, popup_h))
-    popup  = pygame.Surface((popup_w, popup_h))
+    wood = pygame.transform.scale(wood_tex, (popup_w, popup_h))
+    popup = pygame.Surface((popup_w, popup_h))
     popup.blit(wood, (0, 0))
     pygame.draw.rect(popup, PRETO, popup.get_rect(), 4)
 
@@ -134,23 +135,22 @@ def show_intro():
     ]
     for i, l in enumerate(linhas):
         txt = render_text_with_border(l, BRANCO, PRETO, border_size=2)
-        popup.blit(txt, (20, 20 + i*(FONT_SIZE+2)))
+        popup.blit(txt, (20, 20 + i*(FONT_SIZE+4)))
 
     rect    = popup.get_rect(center=(LARGURA//2, ALTURA//2))
     esperando = True
     while esperando:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
+                pygame.quit()
+                sys.exit()
             if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
                 esperando = False
 
-        # quarto escurecido
         tela.blit(bg_quarto, (0,0))
         overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
         overlay.fill((0,0,0,150))
         tela.blit(overlay, (0,0))
-
         tela.blit(popup, rect.topleft)
         pygame.display.flip()
         clock.tick(60)
@@ -165,12 +165,22 @@ def main():
     # paredes do quarto
     WALL = 10
     wall_obstaculos = [
-        Obstaculo(0, 0, LARGURA, WALL),               # topo
-        Obstaculo(0, ALTURA-WALL, LARGURA, WALL),     # base
-        Obstaculo(0, 0, WALL, ALTURA),                # esquerda
-        Obstaculo(LARGURA-WALL, 0, WALL, ALTURA)      # direita
+        Obstaculo(0, 0, LARGURA, WALL),
+        Obstaculo(0, ALTURA-WALL, LARGURA, WALL),
+        Obstaculo(0, 0, WALL, ALTURA),
+        Obstaculo(LARGURA-WALL, 0, WALL, ALTURA)
     ]
-    bottom_wall = wall_obstaculos[1].rect  # muro de baixo
+
+    # zona invisível de saída: 40%–50% da largura, altura = WALL
+    EXIT_ZONE_WIDTH  = int(0.1 * LARGURA)
+    EXIT_ZONE_HEIGHT = 100
+    exit_zone = pygame.Rect(
+        int(0.4 * LARGURA),
+        ALTURA - EXIT_ZONE_HEIGHT,
+        EXIT_ZONE_WIDTH,
+        EXIT_ZONE_HEIGHT
+)
+
 
     ajustar_posicao_inicial(jogador, wall_obstaculos)
     grupo_jogador = pygame.sprite.Group(jogador)
@@ -182,7 +192,7 @@ def main():
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 rodando = False
-            # no prompt, S/N
+            # no prompt, aguarda S ou N
             if asking_exit and e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_s:
                     onibus.main(); return
@@ -192,11 +202,8 @@ def main():
         teclas = pygame.key.get_pressed()
         if not asking_exit:
             jogador.update(teclas, wall_obstaculos)
-            # se tentar sair pela parede de baixo entre 40% e 50% da largura:
-            cx = jogador.rect.centerx
-            if (teclas[pygame.K_DOWN]
-                and jogador.rect.bottom == bottom_wall.top
-                and 0.4*LARGURA <= cx <= 0.5*LARGURA):
+            # ao colidir com a zona de saída, dispara popup
+            if jogador.rect.colliderect(exit_zone):
                 asking_exit = True
 
         # desenha cena
@@ -204,6 +211,9 @@ def main():
         for o in wall_obstaculos:
             tela.blit(o.image, o.rect)
         grupo_jogador.draw(tela)
+
+        # (opcional) debug da zona: 
+        # pygame.draw.rect(tela, (255,0,0), exit_zone, 2)
 
         # popup de saída com madeira + fonte 16-bit
         if asking_exit:

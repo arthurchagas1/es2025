@@ -184,13 +184,5 @@ def tela_menu():
 
 # ─── LOOP PRINCIPAL ─────────────────────────────────
 if __name__ == "__main__":
-<<<<<<< HEAD
     tela_menu()
     quarto.main()
-=======
-    while True:
-        tela_menu()                  # mostra menu inicial
-        result = game.main()         # roda o jogo
-        if result != "menu":         # se o jogo não pediu retorno ao menu, sair
-            break
->>>>>>> 02da69c02523a59de3624ff50ddcbd8de9cd1a4c
