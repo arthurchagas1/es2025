@@ -3,7 +3,7 @@ import sys
 import os
 import time
 from typing import List
-import game  # importa o jogo principal (game.py)
+import onibus  # ou game, conforme seu fluxo
 
 pygame.init()
 
@@ -11,24 +11,46 @@ pygame.init()
 LARGURA = 1280
 ALTURA  = 720
 tela    = pygame.display.set_mode((LARGURA, ALTURA))
-pygame.display.set_caption("Jogo 2D - Com Placas (16:9)")
+pygame.display.set_caption("Quarto")
 
 # Cores
 BRANCO = (255, 255, 255)
+PRETO  = (  0,   0,   0)
 CINZA  = (100, 100, 100)
-PRETO  = (0, 0, 0)
-VERDE  = (0, 255, 0)
 
 clock = pygame.time.Clock()
-fonte = pygame.font.SysFont("Arial", 24)
 
-# -------------- CARREGANDO AS IMAGENS ANIMADAS --------------
+# —————— FONTE 16-BIT “QUADRADONA” ——————
+# Coloque PressStart2P.ttf na pasta do projeto
+FONT_SIZE   = 32
+PIXEL_FONT  = pygame.font.Font("PressStart2P.ttf", FONT_SIZE)
+
+def render_text_with_border(text: str, fg_color, border_color, border_size=2):
+    base = PIXEL_FONT.render(text, True, fg_color)
+    w, h = base.get_width() + 2*border_size, base.get_height() + 2*border_size
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    # borda
+    for dx in (-border_size, 0, border_size):
+        for dy in (-border_size, 0, border_size):
+            if dx or dy:
+                tmp = PIXEL_FONT.render(text, True, border_color)
+                surf.blit(tmp, (dx+border_size, dy+border_size))
+    # texto principal
+    surf.blit(base, (border_size, border_size))
+    return surf
+
+# -------------- TEXTURAS --------------
+wood_tex  = pygame.image.load("wood.png").convert()
+bg_quarto = pygame.transform.scale(pygame.image.load("quarto.png").convert(),
+                                   (LARGURA, ALTURA))
+
+# -------------- ANIMAÇÕES --------------
 def load_animation_frames(folder="animacoes", scale_factor=0.45):
     frames = []
     for i in range(16):
         img = pygame.image.load(os.path.join(folder, f"frame_{i}.png")).convert_alpha()
         ow, oh = img.get_size()
-        frames.append(pygame.transform.scale(img, (int(ow * scale_factor), int(oh * scale_factor))))
+        frames.append(pygame.transform.scale(img, (int(ow*scale_factor), int(oh*scale_factor))))
     return {
         "down":  frames[0:4],
         "left":  frames[8:12],
@@ -44,14 +66,6 @@ class Obstaculo(pygame.sprite.Sprite):
         self.image.fill(CINZA)
         self.rect  = self.image.get_rect(topleft=(x, y))
 
-class Placa(pygame.sprite.Sprite):
-    def __init__(self, x, y, w, h, texto):
-        super().__init__()
-        self.image = pygame.Surface((w, h))
-        self.image.fill(VERDE)
-        self.rect  = self.image.get_rect(topleft=(x, y))
-        self.texto = texto
-
 class Jogador(pygame.sprite.Sprite):
     def __init__(self, animations):
         super().__init__()
@@ -64,26 +78,28 @@ class Jogador(pygame.sprite.Sprite):
         self.velocidade        = 5
 
     def update(self, teclas, obstaculos: List[Obstaculo]):
-        old_rect = self.rect.copy()
-        movendo  = False
+        old = self.rect.copy()
+        mv  = False
         if teclas[pygame.K_LEFT]:
-            self.rect.x -= self.velocidade; self.current_direction = "left";  movendo = True
+            self.rect.x -= self.velocidade; mv=True; self.current_direction="left"
         elif teclas[pygame.K_RIGHT]:
-            self.rect.x += self.velocidade; self.current_direction = "right"; movendo = True
+            self.rect.x += self.velocidade; mv=True; self.current_direction="right"
         elif teclas[pygame.K_UP]:
-            self.rect.y -= self.velocidade; self.current_direction = "up";    movendo = True
+            self.rect.y -= self.velocidade; mv=True; self.current_direction="up"
         elif teclas[pygame.K_DOWN]:
-            self.rect.y += self.velocidade; self.current_direction = "down";  movendo = True
+            self.rect.y += self.velocidade; mv=True; self.current_direction="down"
 
-        # colisão
+        # colisão com paredes
         for o in obstaculos:
             if self.rect.colliderect(o.rect):
-                self.rect = old_rect
+                self.rect = old
                 break
+
+        # mantém dentro da tela
         self.rect.clamp_ip(pygame.Rect(0, 0, LARGURA, ALTURA))
 
         # animação
-        if movendo:
+        if mv:
             seq = self.animations[self.current_direction]
             self.frame_index = (self.frame_index + self.frame_speed) % len(seq)
         else:
@@ -100,160 +116,110 @@ def ajustar_posicao_inicial(jogador: Jogador, obstaculos: List[Obstaculo]):
                 jogador.rect.right = LARGURA
                 break
 
+# -------------- INTRO POPUP --------------
+def show_intro():
+    popup_w, popup_h = 800, 300
+    wood   = pygame.transform.scale(wood_tex, (popup_w, popup_h))
+    popup  = pygame.Surface((popup_w, popup_h))
+    popup.blit(wood, (0, 0))
+    pygame.draw.rect(popup, PRETO, popup.get_rect(), 4)
+
+    linhas = [
+        "Você acorda no seu quarto após",
+        "uma longa noite de sono, devido",
+        "a uma feijoada na casa da sua vó",
+        "você acorda 7h30 extremamente",
+        "atrasado para a primeira aula.",
+        "Saia do seu quarto para ir para a aula."
+    ]
+    for i, l in enumerate(linhas):
+        txt = render_text_with_border(l, BRANCO, PRETO, border_size=2)
+        popup.blit(txt, (20, 20 + i*(FONT_SIZE+2)))
+
+    rect    = popup.get_rect(center=(LARGURA//2, ALTURA//2))
+    esperando = True
+    while esperando:
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                esperando = False
+
+        # quarto escurecido
+        tela.blit(bg_quarto, (0,0))
+        overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        overlay.fill((0,0,0,150))
+        tela.blit(overlay, (0,0))
+
+        tela.blit(popup, rect.topleft)
+        pygame.display.flip()
+        clock.tick(60)
+
 # -------------- MAIN --------------
 def main():
-    animations     = load_animation_frames("animacoes", scale_factor=0.45)
-    jogador        = Jogador(animations)
-    last_transition_time = 0.0
-    transition_cooldown  = 1.0
+    show_intro()
 
-    lendo_placa     = False
-    texto_da_placa  = ""
-    asking_exit     = False  # flag do prompt de sair do quarto
+    animations = load_animation_frames("animacoes", scale_factor=0.45)
+    jogador    = Jogador(animations)
 
-    # Paredes do quarto (bordas)
+    # paredes do quarto
     WALL = 10
     wall_obstaculos = [
-        Obstaculo(0, 0, LARGURA, WALL),
-        Obstaculo(0, ALTURA-WALL, LARGURA, WALL),
-        Obstaculo(0, 0, WALL, ALTURA),
-        Obstaculo(LARGURA-WALL, 0, WALL, ALTURA)
+        Obstaculo(0, 0, LARGURA, WALL),               # topo
+        Obstaculo(0, ALTURA-WALL, LARGURA, WALL),     # base
+        Obstaculo(0, 0, WALL, ALTURA),                # esquerda
+        Obstaculo(LARGURA-WALL, 0, WALL, ALTURA)      # direita
     ]
+    bottom_wall = wall_obstaculos[1].rect  # muro de baixo
 
-    # Fases com background escalado para 16:9
-    fases = [
-        {
-            "obstaculos": wall_obstaculos,
-            "placas":     [],
-            "area_transicao":    pygame.Rect(0, ALTURA-5, LARGURA, 5),
-            "transicao_direcao": "bottom",
-            "fundo": pygame.transform.scale(
-                pygame.image.load("quarto.png").convert(),
-                (LARGURA, ALTURA)
-            )
-        },
-        {
-            "obstaculos": [Obstaculo(300, 200, 200, 50)],
-            "placas":     [Placa(600, 300, 40, 40, "Bem-vindo à portaria!")],
-            "area_transicao":    pygame.Rect(0, 0, LARGURA, 5),
-            "transicao_direcao": "top",
-            "fundo": pygame.transform.scale(
-                pygame.image.load("portaria.png").convert(),
-                (LARGURA, ALTURA)
-            )
-        },
-        {
-            "obstaculos": [Obstaculo(100, 100, 400, 50)],
-            "placas":     [Placa(500, 600, 40, 40, "Aqui é o jardim central.")],
-            "area_transicao":    pygame.Rect(0, ALTURA-5, LARGURA, 5),
-            "transicao_direcao": "bottom",
-            "fundo": pygame.transform.scale(
-                pygame.image.load("bolajardim.png").convert(),
-                (LARGURA, ALTURA)
-            )
-        }
-    ]
-
-    fase_atual    = 0
+    ajustar_posicao_inicial(jogador, wall_obstaculos)
     grupo_jogador = pygame.sprite.Group(jogador)
-    ajustar_posicao_inicial(jogador, fases[0]["obstaculos"])
+    asking_exit   = False
 
-    placa_proxima = None
-    rodando       = True
+    rodando = True
     while rodando:
         clock.tick(60)
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 rodando = False
-
-            # abrir prompt de sair do quarto
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_p and fase_atual == 0 and not lendo_placa:
-                asking_exit = True
-
-            # se estiver no prompt, captura S ou N
+            # no prompt, S/N
             if asking_exit and e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_s:      # 'S' para Sim
-                    game.main()              # chama o jogo principal
-                    return                   # encerra este loop
-                elif e.key == pygame.K_n:    # 'N' para Não
+                if e.key == pygame.K_s:
+                    onibus.main(); return
+                elif e.key == pygame.K_n:
                     asking_exit = False
 
-            # interações placa
-            if not asking_exit:
-                if e.type == pygame.KEYDOWN and e.key == pygame.K_e and placa_proxima:
-                    lendo_placa     = True
-                    texto_da_placa  = placa_proxima.texto
-                if e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN:
-                    lendo_placa = False
-
-        fase   = fases[fase_atual]
-        obs    = pygame.sprite.Group(*fase["obstaculos"])
-        placas = pygame.sprite.Group(*fase["placas"])
         teclas = pygame.key.get_pressed()
-
-        # só permite mover se não estiver lendo placa nem no prompt
-        if not lendo_placa and not asking_exit:
-            jogador.update(teclas, fase["obstaculos"])
-
-        # transição de fase (idem)
-        agora = time.time()
-        if not asking_exit and jogador.rect.colliderect(fase["area_transicao"]) \
-           and (agora - last_transition_time > transition_cooldown):
-            last_transition_time = agora
-            x0, y0 = jogador.rect.center
-            dir0   = fase["transicao_direcao"]
-            fase_atual = (fase_atual + 1) % len(fases)
-            nova = fases[fase_atual]
-            if dir0 == "top":
-                jogador.rect.midtop = (x0, ALTURA - jogador.rect.height)
-            elif dir0 == "bottom":
-                jogador.rect.midbottom = (x0, 0)
-            elif dir0 == "left":
-                jogador.rect.midleft = (LARGURA - jogador.rect.width, y0)
-            elif dir0 == "right":
-                jogador.rect.midright = (0, y0)
-            ajustar_posicao_inicial(jogador, nova["obstaculos"])
-
-        # desenha cena base
-        tela.blit(fase["fundo"], (0, 0))
-        obs.draw(tela)
-        placas.draw(tela)
-        grupo_jogador.draw(tela)
-        pygame.draw.rect(tela, (0,255,0), fase["area_transicao"], 2)
-
-        # indicação de placa
-        placa_proxima = None
         if not asking_exit:
-            for p in placas:
-                if jogador.rect.colliderect(p.rect.inflate(40,40)):
-                    placa_proxima = p
-                    break
-            if placa_proxima and not lendo_placa:
-                aviso = fonte.render("Pressione E para ler a placa", True, PRETO)
-                tela.blit(aviso, (jogador.rect.x-40, jogador.rect.y-30))
+            jogador.update(teclas, wall_obstaculos)
+            # se tentar sair pela parede de baixo entre 40% e 50% da largura:
+            cx = jogador.rect.centerx
+            if (teclas[pygame.K_DOWN]
+                and jogador.rect.bottom == bottom_wall.top
+                and 0.4*LARGURA <= cx <= 0.5*LARGURA):
+                asking_exit = True
 
-        # caixa de leitura de placa
-        if lendo_placa:
-            caixa = pygame.Rect(100, ALTURA-120, LARGURA-200, 100)
-            pygame.draw.rect(tela, BRANCO, caixa)
-            pygame.draw.rect(tela, PRETO, caixa, 3)
-            for i, linha in enumerate(texto_da_placa.split("\\n")):
-                render = fonte.render(linha, True, PRETO)
-                tela.blit(render, (120, ALTURA-100 + i*30))
+        # desenha cena
+        tela.blit(bg_quarto, (0,0))
+        for o in wall_obstaculos:
+            tela.blit(o.image, o.rect)
+        grupo_jogador.draw(tela)
 
-        # prompt de sair do quarto
+        # popup de saída com madeira + fonte 16-bit
         if asking_exit:
-            w, h = 400, 200
-            popup = pygame.Surface((w, h))
-            popup.fill(BRANCO)
-            popup_rect = popup.get_rect(center=(LARGURA//2, ALTURA//2))
-            pygame.draw.rect(popup, PRETO, popup.get_rect(), 2)
-            # textos
-            txt1 = fonte.render("Quer sair do quarto?", True, PRETO)
-            txt2 = fonte.render("S: Sim    N: Não", True, PRETO)
-            popup.blit(txt1, ((w - txt1.get_width())//2, 50))
-            popup.blit(txt2, ((w - txt2.get_width())//2, 120))
-            tela.blit(popup, popup_rect.topleft)
+            pw, ph = 400, 150
+            wood   = pygame.transform.scale(wood_tex, (pw, ph))
+            popup  = pygame.Surface((pw, ph))
+            popup.blit(wood, (0, 0))
+            pygame.draw.rect(popup, PRETO, popup.get_rect(), 4)
+
+            t1 = render_text_with_border("Quer sair do quarto?", BRANCO, PRETO, 2)
+            t2 = render_text_with_border("S: Sim    N: Não", BRANCO, PRETO, 2)
+            popup.blit(t1, ((pw-t1.get_width())//2, 20))
+            popup.blit(t2, ((pw-t2.get_width())//2, 70))
+
+            rect = popup.get_rect(center=(LARGURA//2, ALTURA//2))
+            tela.blit(popup, rect.topleft)
 
         pygame.display.flip()
 
