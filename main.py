@@ -2,6 +2,7 @@
 import pygame
 import sys
 import quarto   # chama o loop principal que está em quarto.py
+import game     # chama o loop principal que está em game.py
 
 pygame.init()
 
@@ -80,4 +81,4 @@ def tela_inicial():
 # ------------------ EXECUÇÃO ------------------ #
 if __name__ == "__main__":
     tela_inicial()   # Mostra a Home Screen
-    quarto.main()    # Inicia o conteúdo do jogo
+    game.main()    # Inicia o conteúdo do jogo
