@@ -1,4 +1,5 @@
 import warnings
+import quarto
 warnings.filterwarnings(
     "ignore",
     message=r"Your system is avx2 capable.*",
@@ -6,10 +7,7 @@ warnings.filterwarnings(
     module="importlib"
 )
 
-import pygame
-import sys
-import quarto   # chama o loop principal que está em quarto.py
-import game     # chama o loop principal que está em game.py
+import pygame, sys, game
 
 pygame.init()
 pygame.mixer.init()
@@ -28,7 +26,7 @@ BRANCO, PRETO  = (255,255,255), (0,0,0)
 MARROM         = (139,69,19)
 BTN_NORMAL     = (240,240,240)
 BTN_HOVER      = (200,200,200)
-PIXEL_FONT     = "/home/pedro/es2025/fonts/PressStart2P-Regular.ttf"  # ajuste se necessário
+PIXEL_FONT     = "PressStart2P.ttf"  # ajuste se necessário
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("ICEx Odissey")
@@ -186,5 +184,5 @@ def tela_menu():
 
 # ─── LOOP PRINCIPAL ─────────────────────────────────
 if __name__ == "__main__":
-    tela_menu()   # Mostra a Home Screen
-    game.main()    # Inicia o conteúdo do jogo
+    tela_menu()
+    quarto.main()
