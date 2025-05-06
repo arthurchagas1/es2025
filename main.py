@@ -1,4 +1,5 @@
 import warnings
+import quarto
 warnings.filterwarnings(
     "ignore",
     message=r"Your system is avx2 capable.*",
