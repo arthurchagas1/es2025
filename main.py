@@ -187,4 +187,4 @@ def tela_menu():
 # ------------------ EXECUÇÃO ------------------ #
 if __name__ == "__main__":
     tela_menu()
-    game.main()
+    quarto.main()
