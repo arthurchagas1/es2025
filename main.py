@@ -1,57 +1,83 @@
+# main.py
 import pygame
 import sys
-import quarto   # agora importa o arquivo quarto.py
+import quarto   # chama o loop principal que está em quarto.py
 
-# Inicialização do pygame
 pygame.init()
 
-# Configurações da tela inicial
+# ------------------ CONSTANTES ------------------ #
 WIDTH, HEIGHT = 1200, 800
+BRANCO        = (255, 255, 255)
+PRETO         = (  0,   0,   0)
+BTN_NORMAL    = (240, 240, 240)
+BTN_HOVER     = (200, 200, 200)
+
+# ------------------ JANELA ------------------ #
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Tela Inicial")
-
-# Definição de cores
-BRANCO = (255, 255, 255)
-PRETO = (0, 0, 0)
-
+pygame.display.set_caption("ICEx Odissey – Tela Inicial")
 clock = pygame.time.Clock()
 
-# Criação de fontes para os textos
-font_titulo = pygame.font.Font(None, 74)
-font_start  = pygame.font.Font(None, 50)
+# ------------------ RECURSOS GRÁFICOS ------------------ #
+# Coloque uma imagem chamada 'home_bg.png' na mesma pasta, ou troque o caminho aqui:
+background = pygame.image.load("home_bg.png").convert()
 
+font_titulo = pygame.font.Font(None, 96)
+font_botao  = pygame.font.Font(None, 60)
+
+# ------------------ FUNÇÕES AUXILIARES ------------------ #
+def preparar_botao(texto: str, centro: tuple[int, int]):
+    """Cria texto renderizado e rects para um botão."""
+    txt_surf = font_botao.render(texto, True, PRETO)
+    txt_rect = txt_surf.get_rect(center=centro)
+    btn_rect = txt_rect.inflate(40, 20)          # área clicável maior que o texto
+    return txt_surf, txt_rect, btn_rect
+
+# ------------------ TELA INICIAL ------------------ #
 def tela_inicial():
-    iniciar = False
-    while not iniciar:
+    # Botões (depositamos todas as superfícies e rects em variáveis)
+    txt_start, txt_rect_start, btn_start = preparar_botao("Começar",      (WIDTH / 2, HEIGHT / 2))
+    txt_conf,  txt_rect_conf,  btn_conf  = preparar_botao("Configurações", (WIDTH / 2, HEIGHT / 2 + 100))
+
+    while True:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            # Usa a tecla Enter ou clique do mouse para iniciar o jogo
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_RETURN:
-                iniciar = True
-            if evento.type == pygame.MOUSEBUTTONDOWN:
-                iniciar = True
+                return  # Começa o jogo pelo Enter
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                if btn_start.collidepoint(evento.pos):
+                    return  # Começa o jogo clicando em Começar
+                if btn_conf.collidepoint(evento.pos):
+                    print("⚙️  Tela de configurações ainda não implementada.")
 
-        # Preenche o fundo com branco
-        screen.fill(BRANCO)
-        
-        # Renderiza o título e o texto do start
-        titulo_texto = font_titulo.render("Meu Jogo", True, PRETO)
-        start_texto  = font_start.render("Pressione Enter para iniciar", True, PRETO)
-        
-        # Centraliza os textos
-        titulo_rect = titulo_texto.get_rect(center=(WIDTH/2, HEIGHT/3))
-        start_rect  = start_texto.get_rect(center=(WIDTH/2, HEIGHT/2))
-        
-        screen.blit(titulo_texto, titulo_rect)
-        screen.blit(start_texto, start_rect)
-        
+        # -------- Renderização -------- #
+        # Fundo
+        screen.blit(pygame.transform.scale(background, (WIDTH, HEIGHT)), (0, 0))
+
+        # Título com leve sombra
+        sombra = font_titulo.render("ICEx Odissey", True, PRETO)
+        sombra_rect = sombra.get_rect(center=(WIDTH / 2 + 3, HEIGHT / 3 + 3))
+        screen.blit(sombra, sombra_rect)
+        titulo = font_titulo.render("ICEx Odissey", True, BRANCO)
+        titulo_rect = titulo.get_rect(center=(WIDTH / 2, HEIGHT / 3))
+        screen.blit(titulo, titulo_rect)
+
+        # Botões
+        mouse_pos = pygame.mouse.get_pos()
+        for rect, txt_rect, txt_surf in [
+            (btn_start, txt_rect_start, txt_start),
+            (btn_conf,  txt_rect_conf,  txt_conf)
+        ]:
+            cor = BTN_HOVER if rect.collidepoint(mouse_pos) else BTN_NORMAL
+            pygame.draw.rect(screen, cor, rect, border_radius=8)
+            pygame.draw.rect(screen, PRETO, rect, 2, border_radius=8)
+            screen.blit(txt_surf, txt_rect)
+
         pygame.display.flip()
         clock.tick(60)
 
-# Executa a tela inicial
-tela_inicial()
-
-# Após sair da tela inicial, inicia o conteúdo do quarto.py
-quarto.main()
+# ------------------ EXECUÇÃO ------------------ #
+if __name__ == "__main__":
+    tela_inicial()   # Mostra a Home Screen
+    quarto.main()    # Inicia o conteúdo do jogo

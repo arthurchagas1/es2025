@@ -3,6 +3,7 @@ import sys
 import os
 import time
 from typing import List
+import game  # importa o jogo principal (game.py)
 
 pygame.init()
 
@@ -54,7 +55,7 @@ class Placa(pygame.sprite.Sprite):
 class Jogador(pygame.sprite.Sprite):
     def __init__(self, animations):
         super().__init__()
-        self.animations       = animations
+        self.animations        = animations
         self.current_direction = "down"
         self.frame_index       = 0
         self.frame_speed       = 0.15
@@ -101,21 +102,22 @@ def ajustar_posicao_inicial(jogador: Jogador, obstaculos: List[Obstaculo]):
 
 # -------------- MAIN --------------
 def main():
-    animations = load_animation_frames("animacoes", scale_factor=0.45)
-    jogador    = Jogador(animations)
-
+    animations     = load_animation_frames("animacoes", scale_factor=0.45)
+    jogador        = Jogador(animations)
     last_transition_time = 0.0
     transition_cooldown  = 1.0
-    lendo_placa          = False
-    texto_da_placa       = ""
+
+    lendo_placa     = False
+    texto_da_placa  = ""
+    asking_exit     = False  # flag do prompt de sair do quarto
 
     # Paredes do quarto (bordas)
     WALL = 10
     wall_obstaculos = [
-        Obstaculo(0, 0, LARGURA, WALL),               # topo
-        Obstaculo(0, ALTURA-WALL, LARGURA, WALL),     # base
-        Obstaculo(0, 0, WALL, ALTURA),                # esquerda
-        Obstaculo(LARGURA-WALL, 0, WALL, ALTURA)      # direita
+        Obstaculo(0, 0, LARGURA, WALL),
+        Obstaculo(0, ALTURA-WALL, LARGURA, WALL),
+        Obstaculo(0, 0, WALL, ALTURA),
+        Obstaculo(LARGURA-WALL, 0, WALL, ALTURA)
     ]
 
     # Fases com background escalado para 16:9
@@ -163,22 +165,40 @@ def main():
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 rodando = False
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_e and placa_proxima:
-                lendo_placa    = True
-                texto_da_placa = placa_proxima.texto
-            if e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN:
-                lendo_placa = False
 
-        fase = fases[fase_atual]
-        obs  = pygame.sprite.Group(*fase["obstaculos"])
+            # abrir prompt de sair do quarto
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_p and fase_atual == 0 and not lendo_placa:
+                asking_exit = True
+
+            # se estiver no prompt, captura S ou N
+            if asking_exit and e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_s:      # 'S' para Sim
+                    game.main()              # chama o jogo principal
+                    return                   # encerra este loop
+                elif e.key == pygame.K_n:    # 'N' para Não
+                    asking_exit = False
+
+            # interações placa
+            if not asking_exit:
+                if e.type == pygame.KEYDOWN and e.key == pygame.K_e and placa_proxima:
+                    lendo_placa     = True
+                    texto_da_placa  = placa_proxima.texto
+                if e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN:
+                    lendo_placa = False
+
+        fase   = fases[fase_atual]
+        obs    = pygame.sprite.Group(*fase["obstaculos"])
         placas = pygame.sprite.Group(*fase["placas"])
         teclas = pygame.key.get_pressed()
-        if not lendo_placa:
+
+        # só permite mover se não estiver lendo placa nem no prompt
+        if not lendo_placa and not asking_exit:
             jogador.update(teclas, fase["obstaculos"])
 
-        # Transição de fase
+        # transição de fase (idem)
         agora = time.time()
-        if jogador.rect.colliderect(fase["area_transicao"]) and (agora - last_transition_time > transition_cooldown):
+        if not asking_exit and jogador.rect.colliderect(fase["area_transicao"]) \
+           and (agora - last_transition_time > transition_cooldown):
             last_transition_time = agora
             x0, y0 = jogador.rect.center
             dir0   = fase["transicao_direcao"]
@@ -194,26 +214,25 @@ def main():
                 jogador.rect.midright = (0, y0)
             ajustar_posicao_inicial(jogador, nova["obstaculos"])
 
-        # Desenho
-        tela.blit(fase["fundo"], (0,0))
+        # desenha cena base
+        tela.blit(fase["fundo"], (0, 0))
         obs.draw(tela)
         placas.draw(tela)
         grupo_jogador.draw(tela)
-
-        # Debug: mostra area de transição
         pygame.draw.rect(tela, (0,255,0), fase["area_transicao"], 2)
 
-        # Indicação de placa
+        # indicação de placa
         placa_proxima = None
-        for p in placas:
-            if jogador.rect.colliderect(p.rect.inflate(40,40)):
-                placa_proxima = p
-                break
-        if placa_proxima and not lendo_placa:
-            aviso = fonte.render("Pressione E para ler a placa", True, PRETO)
-            tela.blit(aviso, (jogador.rect.x-40, jogador.rect.y-30))
+        if not asking_exit:
+            for p in placas:
+                if jogador.rect.colliderect(p.rect.inflate(40,40)):
+                    placa_proxima = p
+                    break
+            if placa_proxima and not lendo_placa:
+                aviso = fonte.render("Pressione E para ler a placa", True, PRETO)
+                tela.blit(aviso, (jogador.rect.x-40, jogador.rect.y-30))
 
-        # Leitura de placa
+        # caixa de leitura de placa
         if lendo_placa:
             caixa = pygame.Rect(100, ALTURA-120, LARGURA-200, 100)
             pygame.draw.rect(tela, BRANCO, caixa)
@@ -221,6 +240,20 @@ def main():
             for i, linha in enumerate(texto_da_placa.split("\\n")):
                 render = fonte.render(linha, True, PRETO)
                 tela.blit(render, (120, ALTURA-100 + i*30))
+
+        # prompt de sair do quarto
+        if asking_exit:
+            w, h = 400, 200
+            popup = pygame.Surface((w, h))
+            popup.fill(BRANCO)
+            popup_rect = popup.get_rect(center=(LARGURA//2, ALTURA//2))
+            pygame.draw.rect(popup, PRETO, popup.get_rect(), 2)
+            # textos
+            txt1 = fonte.render("Quer sair do quarto?", True, PRETO)
+            txt2 = fonte.render("S: Sim    N: Não", True, PRETO)
+            popup.blit(txt1, ((w - txt1.get_width())//2, 50))
+            popup.blit(txt2, ((w - txt2.get_width())//2, 120))
+            tela.blit(popup, popup_rect.topleft)
 
         pygame.display.flip()
 
