@@ -287,7 +287,7 @@ def main():
         elif time.time()-evento_timer>=2:
             evento_txt=""
 
-        tela.blit(fonte_hud.render("Esc – Config",True,(255,255,0)),(10,10))
+        tela.blit(fonte_hud.render("Esc – Pausa/Config.",True,(255,255,0)),(10,10))
 
         pygame.display.flip()
 
