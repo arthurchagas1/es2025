@@ -9,8 +9,8 @@ warnings.filterwarnings(
 
 import pygame
 import sys
-import quarto   # chama o loop principal que está em quarto.py
-import game     # chama o loop principal que está em game.py
+import quarto   # loop principal do jogo
+import game
 
 pygame.init()
 pygame.mixer.init()
@@ -186,5 +186,5 @@ def tela_menu():
 
 # ------------------ EXECUÇÃO ------------------ #
 if __name__ == "__main__":
-    tela_inicial()   # Mostra a Home Screen
-    game.main()    # Inicia o conteúdo do jogo
+    tela_menu()
+    game.main()
