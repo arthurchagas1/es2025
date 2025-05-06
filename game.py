@@ -152,63 +152,87 @@ QUESTOES = [
 ]
 
 # --------------------- QUIZ LOOP ---------------------
-def run_quiz(surface, font) -> bool:
+def run_quiz(surface, font, host_image, background_snapshot) -> bool:
+    """Overlay quiz inside the bottom dialog box and return True if player
+       answers ≥ 2 of 3 questions correctly."""
     perguntas = random.sample(QUESTOES, 3)
     acertos   = 0
 
+    # layout helpers
+    caixa = pygame.Rect(100, 550, 1000, 220)
+    host_pos = (LARGURA//2 - host_image.get_width()//2, 200)
+
     for q in perguntas:
-        selecionada = 0
-        respondida  = False
-        feedback_icon = None
-        feedback_time = 0
+        sel = 0
+        answered = False
+        feedback_icon, feedback_time = None, 0
 
         while True:
+            # ── events ──
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
                     pygame.quit(); sys.exit()
-                if e.type == pygame.KEYDOWN and not respondida:
+                if e.type == pygame.KEYDOWN and not answered:
                     if e.key in (pygame.K_UP, pygame.K_w):
-                        selecionada = (selecionada - 1) % len(q.opcoes)
+                        sel = (sel - 1) % 4
                     elif e.key in (pygame.K_DOWN, pygame.K_s):
-                        selecionada = (selecionada + 1) % len(q.opcoes)
+                        sel = (sel + 1) % 4
                     elif e.key == pygame.K_RETURN:
-                        respondida = True
-                        correta = (selecionada == q.correta)
+                        answered = True
+                        correta  = sel == q.correta
                         feedback_icon = ICON_OK if correta else ICON_FAIL
                         if correta: acertos += 1
                         feedback_time = time.time()
 
-            # Draw quiz screen
-            surface.fill((30, 30, 90))
-            pergunta_render = font.render(q.pergunta, True, BRANCO)
-            surface.blit(pergunta_render, (60, 80))
+            # ── draw world snapshot then overlay ──
+            surface.blit(background_snapshot, (0, 0))
+            surface.blit(host_image, host_pos)          # quiz host
 
+            # dialog box
+            pygame.draw.rect(surface, BRANCO, caixa)
+            pygame.draw.rect(surface, PRETO,  caixa, 3)
+
+            # pergunta
+            txt_perg = font.render(q.pergunta, True, PRETO)
+            surface.blit(txt_perg, (caixa.x + 20, caixa.y + 15))
+
+            # opções
             for i, opcao in enumerate(q.opcoes):
-                y = 200 + i*60
-                if i == selecionada:
-                    pygame.draw.rect(surface, AZUL_CLARO, (50, y-5, 700, 40))
-                txt = font.render(opcao, True, BRANCO)
-                surface.blit(txt, (60, y))
-            if respondida:
-                surface.blit(feedback_icon, (800, 200 + selecionada*60))
-                if time.time() - feedback_time >= 1.0:
+                y = caixa.y + 65 + i * 35
+                if i == sel:
+                    pygame.draw.rect(surface, (150, 200, 255),
+                                     (caixa.x + 10, y - 4, caixa.w - 20, 30))
+                txt = font.render(opcao, True, PRETO)
+                surface.blit(txt, (caixa.x + 25, y))
+
+            # feedback ✓ / ✗
+            if answered:
+                surface.blit(feedback_icon,
+                             (caixa.right - 60, caixa.y + 60 + sel * 35))
+                if time.time() - feedback_time >= 1:
                     break
 
             pygame.display.flip()
             clock.tick(60)
 
-    # Result screen
+    # ── result banner inside same box ──
     passou = acertos >= 2
-    msg = "Parabéns! Você passou." if passou else "Não foi dessa vez..."
-    cor = (0, 200, 0) if passou else (200, 0, 0)
-    t0 = time.time()
-    while time.time() - t0 < 2.0:
+    msg  = "Parabéns! Você passou." if passou else "Não foi dessa vez..."
+    cor  = (0, 200, 0) if passou else (200, 0, 0)
+    end_time = time.time() + 2
+
+    while time.time() < end_time:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
-        surface.fill((0, 0, 0))
-        txt = font.render(msg, True, cor)
-        surface.blit(txt, ((LARGURA-txt.get_width())//2, ALTURA//2))
+        surface.blit(background_snapshot, (0, 0))
+        surface.blit(host_image, host_pos)
+        pygame.draw.rect(surface, BRANCO, caixa)
+        pygame.draw.rect(surface, PRETO,  caixa, 3)
+        banner = font.render(msg, True, cor)
+        surface.blit(banner,
+                     (caixa.x + (caixa.w - banner.get_width()) // 2,
+                      caixa.y + 90))
         pygame.display.flip()
         clock.tick(60)
 
@@ -228,7 +252,16 @@ def ajustar_posicao_inicial(jogador, obstaculos):
 # --------------------- MAIN GAME LOOP ----------------
 def main():
     animations = load_animation_frames()
+
+    # ── NEW: quiz‑host sprite (3× larger than player frame) ──
+    host_raw     = animations["down"][0]
+    HOST_IMAGE   = pygame.transform.scale(
+        host_raw,
+        (host_raw.get_width() * 3, host_raw.get_height() * 3)
+    )
+
     jogador = Jogador(animations)
+
     grupo_jogador = pygame.sprite.Group(jogador)
 
     fases = [
@@ -310,11 +343,16 @@ def main():
             ajustar_posicao_inicial(jogador, nova["obstaculos"])
 
         # ------------ Quiz launch ---------------
+        # ------------ Quiz launch ---------------
         if quiz_pending:
-            result = run_quiz(tela, fonte)
+            # snapshot of current frame to keep world frozen behind dialog
+            bg_snap = tela.copy()
+            result  = run_quiz(tela, fonte, HOST_IMAGE, bg_snap)
+
             evento_texto = "Evento A: Sucesso!" if result else "Evento B: Falha!"
             evento_timer = time.time()
             quiz_pending = False
+
 
         # ------------ DRAW ------------
         tela.blit(fase["fundo"], (0, 0))

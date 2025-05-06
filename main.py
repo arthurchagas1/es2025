@@ -30,7 +30,7 @@ PRETO         = (  0,   0,   0)
 MARROM        = (139,  69,  19)
 BTN_NORMAL    = (240, 240, 240)
 BTN_HOVER     = (200, 200, 200)
-PIXEL_FONT    = "/home/pedro/es2025/fonts/PressStart2P-Regular.ttf"
+PIXEL_FONT    = "fonts/PressStart2P-Regular.ttf"
 
 # ------------------ JANELA ------------------ #
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -186,5 +186,5 @@ def tela_menu():
 
 # ------------------ EXECUÇÃO ------------------ #
 if __name__ == "__main__":
-    tela_inicial()   # Mostra a Home Screen
+    tela_menu()   # Mostra a Home Screen
     game.main()    # Inicia o conteúdo do jogo
