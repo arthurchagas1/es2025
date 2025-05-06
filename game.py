@@ -1,6 +1,8 @@
 import pygame, sys, os, time, random
 from typing import List
 
+
+
 pygame.init()
 clock = pygame.time.Clock()
 
@@ -114,13 +116,72 @@ class NPC(pygame.sprite.Sprite):
         self.idx+=1
         if self.idx>=len(self.falas): self.ativo=False
 
-# ───────── HUD INVENTÁRIO ─────────
-def desenhar_inventario(surf,inv):
-    x=LARGURA-50
-    for nome,icon in reversed(inv):
-        surf.blit(icon,(x,10))
-        surf.blit(fonte_dialog.render(nome,True,PRETO),(x-110,15))
-        x-=120
+import math
+# … tudo o mais igual …
+
+# ───────── HUD INVENTÁRIO BONITINHO ─────────
+# Carregue a fonte de inventário lá no topo, junto com a de 16-bits:
+INV_FONT_SIZE = 10
+inv_font = pygame.font.Font("PressStart2P.ttf", INV_FONT_SIZE)
+
+def render_text_with_border(text: str, fg: tuple, border: tuple, font: pygame.font.Font, border_size=1):
+    """Renderiza texto com borda."""
+    base = font.render(text, True, fg)
+    w, h = base.get_width() + 2*border_size, base.get_height() + 2*border_size
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    for dx in (-border_size, 0, border_size):
+        for dy in (-border_size, 0, border_size):
+            if dx or dy:
+                surf.blit(font.render(text, True, border), (dx+border_size, dy+border_size))
+    surf.blit(base, (border_size, border_size))
+    return surf
+
+def desenhar_inventario(surf, inv):
+    """
+    Desenha o inventário sempre com 5 slots,
+    centralizado horizontalmente e posicionado na parte de baixo da tela,
+    com espaçamento maior entre os itens.
+    """
+    slot_size   = 48
+    padding     = 16   # mais espaço entre slots
+    total_slots = 5
+
+    # calcula tamanho do painel
+    panel_w = total_slots * slot_size + (total_slots + 1) * padding
+    panel_h = slot_size + inv_font.get_height() + 3 + 2 * padding
+
+    # posição: meio-x e 10px acima da borda inferior
+    x0 = (LARGURA - panel_w) // 2
+    y0 = ALTURA - panel_h - 10
+
+    # desenha o painel de madeira
+    painel = pygame.transform.scale(WOOD_IMG, (panel_w, panel_h))
+    surf.blit(painel, (x0, y0))
+
+    for i in range(total_slots):
+        # coord de cada slot
+        x = x0 + padding + i * (slot_size + padding)
+        y = y0 + padding
+
+        # retângulo do slot
+        slot_rect = pygame.Rect(x, y, slot_size, slot_size)
+        pygame.draw.rect(surf, PRETO, slot_rect, 2)
+
+        # se houver item nesse slot, desenha ícone e nome
+        if i < len(inv):
+            nome, icon = inv[i]
+            # ícone centralizado dentro do slot
+            ic = pygame.transform.scale(icon, (slot_size - 8, slot_size - 8))
+            surf.blit(ic, (x + 4, y + 4))
+
+            # nome abaixo do slot, com fonte PressStart2P e borda preta
+            txt = render_text_with_border(nome, BRANCO, PRETO, inv_font, border_size=1)
+            tx = x + (slot_size - txt.get_width()) // 2
+            ty = y + slot_size + 4
+            surf.blit(txt, (tx, ty))
+
+
+
 
 # ───────── QUIZ ─────────
 class QuizQuestion:
@@ -134,6 +195,7 @@ def run_quiz(surface)->bool:
         sel,answered,icon,t0=0,False,None,0
         while True:
             for e in pygame.event.get():
+                
                 if e.type==pygame.QUIT: pygame.quit(); sys.exit()
                 if e.type==pygame.KEYDOWN and not answered:
                     if e.key in (pygame.K_UP,pygame.K_w): sel=(sel-1)%len(q.opts)
@@ -159,6 +221,7 @@ def run_quiz(surface)->bool:
     while time.time()-t0<2:
         for e in pygame.event.get():
             if e.type==pygame.QUIT: pygame.quit(); sys.exit()
+            
         surface.fill(PRETO)
         surface.blit(fonte_dialog.render(msg,True,cor),((LARGURA-300)//2,ALTURA//2))
         pygame.display.flip(); clock.tick(60)
@@ -175,6 +238,18 @@ def ajustar_posicao_inicial(j,obs):
 
 # ─────────────────────────────────────────────
 def main():
+
+
+    # posição X fixa (centro)
+    inv_x0 = (LARGURA - panel_w) // 2
+    # quando oculto, Y fica abaixo da tela; quando visível, 10px acima da borda inferior
+    inv_hidden_y  = ALTURA + 10
+    inv_visible_y = ALTURA - panel_h - 10
+
+    inv_current_y  = inv_hidden_y
+    inv_target_y   = inv_hidden_y
+
+
     anim = load_animation_frames()
     jogador = Jogador(anim)
     grupo_jog = pygame.sprite.Group(jogador)
@@ -386,7 +461,13 @@ def main():
                       ((LARGURA-fonte_dialog.size(evento_txt)[0])//2,40))
         elif time.time()-evento_timer>=3: evento_txt=""
 
-        tela.blit(fonte_hud.render("Esc – Pausa/Config.",True,(255,255,0)),(10,10))
+        ESC_FONT = pygame.font.Font("PressStart2P.ttf", 16)
+        # desenha "Esc – Pausa/Config." com a fonte PressStart2P e borda preta
+# desenha "Esc – Pausa/Config." com fonte 12px PressStart2P e borda preta
+        txt = render_text_with_border("Esc – Pausa/Config.", BRANCO, PRETO, ESC_FONT, border_size=1)
+        tela.blit(txt, (10, 10))
+
+
         pygame.display.flip()
 
     return "menu" if restart_to_menu else None
