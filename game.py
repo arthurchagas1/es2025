@@ -45,8 +45,12 @@ def load_animation_frames(folder="animacoes", scale=0.15):
         img = pygame.image.load(os.path.join(folder,f"frame_{i}.png")).convert_alpha()
         w,h = img.get_size()
         frames.append(pygame.transform.scale(img,(int(w*scale),int(h*scale))))
-    return {"down":frames[0:4], "left":frames[8:12],
-            "right":frames[12:16], "up":frames[4:8]}
+    return {
+        "down":  frames[0:4],
+        "left":  frames[8:12],
+        "right": frames[12:16],
+        "up":    frames[4:8]
+    }
 
 def load_item_image(nome,size=(40,40)):
     path=os.path.join("itens",f"{nome}.png")
@@ -82,20 +86,24 @@ def desenhar_barra_conhecimento(surf,valor,max_val=100):
 # ───────────── SPRITES ─────────────
 class Obstaculo(pygame.sprite.Sprite):
     def __init__(self,x,y,w,h):
-        super().__init__(); self.image=pygame.Surface((w,h)); self.image.fill(CINZA)
+        super().__init__()
+        self.image=pygame.Surface((w,h))
+        self.image.fill(CINZA)
         self.rect=self.image.get_rect(topleft=(x,y))
 
 class Placa(pygame.sprite.Sprite):
     def __init__(self,x,y,w,h,texto):
         super().__init__()
-        self.image=pygame.Surface((w,h)); self.image.fill(VERDE)
+        self.image=pygame.Surface((w,h))
+        self.image.fill(VERDE)
         self.rect=self.image.get_rect(topleft=(x,y))
         self.texto=texto
 
 class Item(pygame.sprite.Sprite):
     def __init__(self,x,y,nome):
         super().__init__()
-        self.nome=nome; self.image=load_item_image(nome)
+        self.nome=nome
+        self.image=load_item_image(nome)
         self.rect=self.image.get_rect(topleft=(x,y))
 
 class Jogador(pygame.sprite.Sprite):
@@ -121,7 +129,9 @@ class Jogador(pygame.sprite.Sprite):
         elif keys[pygame.K_UP]:  self.rect.y-=self.speed; self.dir="up";    moving=True
         elif keys[pygame.K_DOWN]:self.rect.y+=self.speed; self.dir="down";  moving=True
         for o in obs:
-            if self.rect.colliderect(o.rect): self.rect=old; break
+            if self.rect.colliderect(o.rect):
+                self.rect=old
+                break
         self.rect.clamp_ip(pygame.Rect(0,0,LARGURA,ALTURA))
         self.idx=(self.idx+0.15)%len(self.anim[self.dir]) if moving else 0
         self.image=self.anim[self.dir][int(self.idx)]
@@ -134,19 +144,26 @@ class Jogador(pygame.sprite.Sprite):
 
 class NPC(pygame.sprite.Sprite):
     def __init__(self,x,y,image):
-        super().__init__(); self.image=image; self.rect=image.get_rect(center=(x,y))
-        self.falas:list[str]=[]; self.idx=0; self.ativo=False
+        super().__init__()
+        self.image=image
+        self.rect=image.get_rect(center=(x,y))
+        self.falas:list[str]=[]
+        self.idx=0
+        self.ativo=False
     def iniciar_dialogo(self, falas:list[str]):
-        self.falas=falas; self.idx=0; self.ativo=True
+        self.falas=falas
+        self.idx=0
+        self.ativo=True
     def avancar_dialogo(self):
         self.idx+=1
-        if self.idx>=len(self.falas): self.ativo=False
+        if self.idx>=len(self.falas):
+            self.ativo=False
+
 
 import math
 # … tudo o mais igual …
 
 # ───────── HUD INVENTÁRIO BONITINHO ─────────
-# Carregue a fonte de inventário lá no topo, junto com a de 16-bits:
 INV_FONT_SIZE = 10
 inv_font = pygame.font.Font("PressStart2P.ttf", INV_FONT_SIZE)
 
@@ -169,7 +186,7 @@ def desenhar_inventario(surf, inv):
     com espaçamento maior entre os itens.
     """
     slot_size   = 48
-    padding     = 16   # mais espaço entre slots
+    padding     = 16
     total_slots = 5
 
     # calcula tamanho do painel
@@ -185,69 +202,111 @@ def desenhar_inventario(surf, inv):
     surf.blit(painel, (x0, y0))
 
     for i in range(total_slots):
-        # coord de cada slot
         x = x0 + padding + i * (slot_size + padding)
         y = y0 + padding
-
-        # retângulo do slot
         slot_rect = pygame.Rect(x, y, slot_size, slot_size)
         pygame.draw.rect(surf, PRETO, slot_rect, 2)
 
-        # se houver item nesse slot, desenha ícone e nome
         if i < len(inv):
             nome, icon = inv[i]
-            # ícone centralizado dentro do slot
             ic = pygame.transform.scale(icon, (slot_size - 8, slot_size - 8))
             surf.blit(ic, (x + 4, y + 4))
-
-            # nome abaixo do slot, com fonte PressStart2P e borda preta
             txt = render_text_with_border(nome, BRANCO, PRETO, inv_font, border_size=1)
             tx = x + (slot_size - txt.get_width()) // 2
             ty = y + slot_size + 4
             surf.blit(txt, (tx, ty))
 
 
-
-
 # ───────── QUIZ ─────────
 class QuizQuestion:
-    def __init__(self,q,opts,ans): self.q=q; self.opts=opts; self.ans=ans
-QUESTOES=[QuizQuestion("Quanto é 2 + 2?",["3","4","5","22"],1),
-          QuizQuestion("Qual linguagem estamos usando?",["Java","C++","Python","Ruby"],2),
-          QuizQuestion("Qual planeta é vermelho?",["Terra","Vênus","Marte","Júpiter"],2)]
+    def __init__(self,q,opts,ans):
+        self.q=q
+        self.opts=opts
+        self.ans=ans
+
+QUESTOES=[
+    QuizQuestion("Quanto é 2 + 2?",["3","4","5","22"],1),
+    QuizQuestion("Qual linguagem estamos usando?",["Java","C++","Python","Ruby"],2),
+    QuizQuestion("Qual planeta é vermelho?",["Terra","Vênus","Marte","Júpiter"],2)
+]
+
 def run_quiz(surface)->int:
-    perguntas=random.sample(QUESTOES,3); acertos=0
+    perguntas=random.sample(QUESTOES,3)
+    acertos=0
     for q in perguntas:
         sel,done=0,False
         while True:
             for e in pygame.event.get():
-                if e.type==pygame.QUIT: pygame.quit(); sys.exit()
+                if e.type==pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
                 if e.type==pygame.KEYDOWN and not done:
-                    if e.key in (pygame.K_UP,pygame.K_w):   sel=(sel-1)%len(q.opts)
-                    elif e.key in (pygame.K_DOWN,pygame.K_s): sel=(sel+1)%len(q.opts)
+                    if e.key in (pygame.K_UP,pygame.K_w):   
+                        sel=(sel-1)%len(q.opts)
+                    elif e.key in (pygame.K_DOWN,pygame.K_s):
+                        sel=(sel+1)%len(q.opts)
                     elif e.key==pygame.K_RETURN:
                         done=True
-                        if sel==q.ans: acertos+=1
+                        if sel==q.ans:
+                            acertos+=1
                         time.sleep(0.4)
             surface.fill((30,30,90))
             surface.blit(fonte_dialog.render(q.q,True,BRANCO),(60,80))
             for i,opt in enumerate(q.opts):
                 y=200+i*60
-                if i==sel: pygame.draw.rect(surface,AZUL_CLARO,(50,y-5,700,40))
+                if i==sel:
+                    pygame.draw.rect(surface,AZUL_CLARO,(50,y-5,700,40))
                 surface.blit(fonte_dialog.render(opt,True,BRANCO),(60,y))
-            pygame.display.flip(); clock.tick(60)
-            if done: break
+            pygame.display.flip()
+            clock.tick(60)
+            if done:
+                break
     return acertos
 
+# ...existing code...
+
+# ─── ADDED: função para interação com Dexter ───
+def run_dexter_interacao(surface):
+    """
+    Exibe duas opções: [Fazer carinho] ou [Não fazer].
+    Retorna True se o jogador fizer carinho.
+    """
+    opcoes = ["Fazer carinho", "Não fazer"]
+    sel = 0
+    while True:
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if e.type == pygame.KEYDOWN:
+                if e.key in (pygame.K_UP, pygame.K_w):
+                    sel = (sel - 1) % len(opcoes)
+                elif e.key in (pygame.K_DOWN, pygame.K_s):
+                    sel = (sel + 1) % len(opcoes)
+                elif e.key == pygame.K_RETURN:
+                    # Retorna True se escolheu "Fazer carinho"
+                    return (sel == 0)
+        surface.fill((30, 80, 30))
+        surf_txt = fonte_dialog.render("O que fazer com Dexter?", True, BRANCO)
+        surface.blit(surf_txt, (50, 50))
+        for i, opt in enumerate(opcoes):
+            y=150+i*60
+            if i==sel:
+                pygame.draw.rect(surface,AZUL_CLARO,(40,y-5,800,40))
+            surface.blit(fonte_dialog.render(opt,True,BRANCO),(50,y))
+        pygame.display.flip()
+        clock.tick(60)
 
 # ─── POSIÇÃO INICIAL ───
 def ajustar_posicao_inicial(j,obs):
     while any(j.rect.colliderect(o.rect) for o in obs):
         j.rect.y-=j.speed
         if j.rect.top<=0:
-            j.rect.top=0; j.rect.x+=j.speed
+            j.rect.top=0
+            j.rect.x+=j.speed
             if j.rect.right>=LARGURA:
-                j.rect.right=LARGURA; break
+                j.rect.right=LARGURA
+                break
 
 def main():
     inv_visible = False
@@ -268,6 +327,11 @@ def main():
 
     natalie_sprite = load_npc_sprite("frame_13.png", scale=1.25)
     natalie = NPC(9 * LARGURA / 10, 1 * ALTURA / 10, natalie_sprite)
+
+    # ─── ADDED: Dexter NPC ───
+    dexter_sprite = load_npc_sprite("frame_3.png", scale=0.035, folder="animacoes3")
+    dexter = NPC(400, 500, dexter_sprite)
+    dexter_interacted = False
 
     quest_target = pygame.Rect(0, ALTURA // 2 - 200, 210, 300)
 
@@ -311,7 +375,11 @@ def main():
         },
         {
             "fundo": load_bg("jardim2.png"),
-            "obstaculos": [], "placas": [], "itens": [], "npcs": [],
+            "obstaculos": [], 
+            "placas": [], 
+            "itens": [], 
+            # ─── ADDED: Dexter no índice 4 ───
+            "npcs": [dexter],
             "transicoes": [
                 {"rect": pygame.Rect(0, 0, LARGURA, 5), "dest": 3, "spawn_side": "bottom"},
                 {"rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5), "dest": 5, "spawn_side": "top"}
@@ -360,7 +428,8 @@ def main():
                     texto_placa = placa_prox.texto
                 elif ev.key == pygame.K_RETURN and lendo_placa:
                     lendo_placa = False
-                elif ev.key == pygame.K_e and npc_prox and not npc_prox.ativo and not lendo_placa:
+                # ─── Interação com Natalie ───
+                elif ev.key == pygame.K_e and npc_prox and npc_prox is natalie and not natalie.ativo and not lendo_placa:
                     if quest_state == "not_started":
                         falas = [
                             "Natalie! Que bom que você está aqui, tenho uma prova agora,\npreciso muito de uma caneta emprestada…",
@@ -369,28 +438,51 @@ def main():
                             "Ok, vou tirar a foto e já volto!",
                             "N: Ah, e não esquece de pegar a câmera na minha mochila!"
                         ]
-                        npc_prox.iniciar_dialogo(falas)
+                        natalie.iniciar_dialogo(falas)
                     elif quest_state == "in_progress":
-                        npc_prox.iniciar_dialogo(["Você ainda não tirou a foto!"])
+                        natalie.iniciar_dialogo(["Você ainda não tirou a foto!"])
                     elif quest_state == "photo_taken":
-                        npc_prox.iniciar_dialogo(["Uau, ficou ótima!", "Aqui está sua caneta 🖊️", "Boa prova!"])
+                        natalie.iniciar_dialogo(["Uau, ficou ótima!", "Aqui está sua caneta 🖊️", "Boa prova!"])
                         jogador.remover("Camera")
                         jogador.coletar(Item(0, 0, "Caneta"))
                         item_msg = "🖊️ Caneta adicionada ao inventário!"
                         item_timer = time.time()
                         quest_state = "done"
                     else:
-                        npc_prox.iniciar_dialogo(["Boa sorte na prova!"])
-                elif ev.key == pygame.K_RETURN and npc_prox and npc_prox.ativo:
-                    npc_prox.avancar_dialogo()
-                    # 🎁 dar a câmera depois do diálogo
-                    if not npc_prox.ativo and quest_state == "not_started":
+                        natalie.iniciar_dialogo(["Boa sorte na prova!"])
+                elif ev.key == pygame.K_RETURN and npc_prox and npc_prox is natalie and natalie.ativo:
+                    natalie.avancar_dialogo()
+                    if not natalie.ativo and quest_state == "not_started":
                         jogador.coletar(Item(0, 0, "Camera"))
                         item_msg = "📷 Câmera adicionada ao inventário!"
                         item_timer = time.time()
                         quest_state = "in_progress"
-                elif ev.key == pygame.K_q:
-                    quiz_pending = True
+                # ─── Interação com Dexter ───
+                elif (
+                    ev.key == pygame.K_e
+                    and npc_prox
+                    and npc_prox is dexter
+                    and not dexter.ativo
+                    and not lendo_placa
+                    and not dexter_interacted
+                ):
+                    # Abre a escolha de fazer carinho
+                    fez_carinho = run_dexter_interacao(tela)
+                    if fez_carinho:
+                        item = Item(0, 0, "ResumoED")
+                        jogador.coletar(item)
+                        item_msg = "📄 Resumo ED adicionado ao inventário!"
+                        # Adiciona 30 de conhecimento (máx. 100):
+                        jogador.conhecimento = min(jogador.conhecimento + 30, 100)
+                        # Aviso mais chamativo:
+                        evento_txt = "⚡ PARABÉNS! +30 CONHECIMENTO! Você ganhou o resumo do Dexter!"
+                        evento_timer = time.time()
+                        dexter_interacted = True
+                        dexter.kill()  # Dexter some após interação
+                    else:
+                        evento_txt = "Dexter ficou triste e não te deu nada..."
+                        evento_timer = time.time()
+                        dexter_interacted = True
 
         fase = fases[fase_idx]
         grupo_obs = pygame.sprite.Group(*fase["obstaculos"])
@@ -421,10 +513,14 @@ def main():
                 next_fase = fases[fase_idx]
                 cx, cy = jogador.rect.center
                 side = tdata["spawn_side"]
-                if side == "top": jogador.rect.midtop = (cx, 0)
-                elif side == "bottom": jogador.rect.midbottom = (cx, ALTURA)
-                elif side == "left": jogador.rect.midleft = (0, cy)
-                elif side == "right": jogador.rect.midright = (LARGURA, cy)
+                if side == "top":
+                    jogador.rect.midtop = (cx, 0)
+                elif side == "bottom":
+                    jogador.rect.midbottom = (cx, ALTURA)
+                elif side == "left":
+                    jogador.rect.midleft = (0, cy)
+                elif side == "right":
+                    jogador.rect.midright = (LARGURA, cy)
                 ajustar_posicao_inicial(jogador, next_fase["obstaculos"])
                 break
 
@@ -433,7 +529,8 @@ def main():
             ganho=acertos*10
             jogador.conhecimento=min(jogador.conhecimento+ganho,100)
             evento_txt = f"+{ganho} conhecimento!" if ganho else "Nenhum acerto..."
-            evento_timer=time.time(); quiz_pending=False
+            evento_timer=time.time()
+            quiz_pending=False
 
         tela.blit(fase["fundo"], (0, 0))
         grupo_obs.draw(tela)
@@ -488,8 +585,6 @@ def main():
                 tela.blit(fonte_dialog.render(parte, True, PRETO), (caixa.x + 20, caixa.y + 50 + i * 28))
 
         desenhar_inventario(tela, jogador.inv)
-
-        desenhar_inventario(tela,jogador.inv)
         desenhar_barra_conhecimento(tela,jogador.conhecimento)
 
         if evento_txt and time.time() - evento_timer < 3:
@@ -505,7 +600,6 @@ def main():
         elif time.time() - evento_timer >= 3:
             evento_txt = ""
 
-        # 🟢 mensagem de item
         if item_msg and time.time() - item_timer < 3:
             surf_txt = fonte_dialog.render(item_msg, True, PRETO)
             w, h = surf_txt.get_size()
