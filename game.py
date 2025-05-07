@@ -536,9 +536,9 @@ def main():
                             evento_txt = "+40 conhecimento! Dexter está feliz!"
                             npc_prox.iniciar_dialogo([
                                 "Dexter ficou feliz com o carinho!",
-                                "Ele te deu um resumo de ED (+40 conhecimento)."
+                                "Ele te deu um resumo de ED que estava mastigando (+40 conhecimento)."
                             ])
-                            jogador.coletar(Item(0, 0, "Resumo de ED"))
+                            jogador.coletar(Item(0, 0, "Resumo"))
                         else:
                             evento_txt = "Dexter parece triste…"
                             npc_prox.iniciar_dialogo(["Dexter ficou triste por não receber carinho."])
