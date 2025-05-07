@@ -417,6 +417,7 @@ def main():
         "obstaculos": [],
         "placas": [],
         "itens": [],
+        "quest_target": quest_target,
         "npcs": [],
         "transicoes": [
             {
@@ -507,7 +508,6 @@ def main():
         ]
     }
 ]
-
 
     fase_idx = 0
     ajustar_posicao_inicial(jogador, fases[0]["obstaculos"])
