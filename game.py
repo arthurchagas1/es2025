@@ -522,11 +522,11 @@ def main():
                     if npc_prox.tipo == "dexter" and not dexter_interacted:
                         fez_carinho = run_dexter_interacao(tela)
                         if fez_carinho:
-                            jogador.conhecimento = min(jogador.conhecimento + 25, 100)
-                            evento_txt = "+25 conhecimento! Dexter está feliz!"
+                            jogador.conhecimento = min(jogador.conhecimento + 40, 100)
+                            evento_txt = "+40 conhecimento! Dexter está feliz!"
                             npc_prox.iniciar_dialogo([
                                 "Dexter ficou feliz com o carinho!",
-                                "Ele te deu um resumo de ED (+25 conhecimento)."
+                                "Ele te deu um resumo de ED (+40 conhecimento)."
                             ])
                             jogador.coletar(Item(0, 0, "Resumo de ED"))
                         else:
@@ -536,15 +536,6 @@ def main():
 
                     elif npc_prox == porteiro:
                         porteiro.iniciar_dialogo([
-                            "P: Bom dia, estudante!",
-                            "Bom dia Porteiro! Estou indo para a prova.",
-                            "Eu esqueci minha carteirinha, posso entrar?",
-                            "P: Não pode entrar sem carteirinha!",
-                            "P: Como vou saber se você é estudante?",
-                            "Não se preocupe, eu sou estudante sim! Eu posso provar!",
-                            "P: Então prove! Responda a esse quiz sobre o ICEx e a UFMG.",
-                            "P: Só um verdadeiro estudante consegue passar!",
-                            "Estou pronto!"
                             "P: Bom dia, estudante!",
                             "Bom dia Porteiro! Estou indo para a prova.",
                             "Eu esqueci minha carteirinha, posso entrar?",
@@ -572,9 +563,9 @@ def main():
 
                         elif quest_state == "photo_taken":
                             natalie.iniciar_dialogo([
-                                "Uau, ficou ótima!",
-                                "Aqui está sua caneta",
-                                "Boa prova!"
+                                "N: Uau, ficou ótima!",
+                                "N: Aqui está sua caneta",
+                                "N: Boa prova!"
                             ])
 
                         else:
@@ -582,16 +573,33 @@ def main():
 
                     elif npc_prox == professor:
                         has_pen = any(n == "Caneta" for n, _ in jogador.inv)
-                        if jogador.conhecimento >= 40 and has_pen:
+                        conhecimento_suficiente = jogador.conhecimento >= 40
+
+                        if has_pen and conhecimento_suficiente:
                             professor.iniciar_dialogo([
-                                "Professor: Chegou a tempo.",
-                                "Professor: Se já estudou bastante, vamos ver o resultado…"
+                                "Prof. Meira: Chegou a tempo...",
+                                "Prof. Meira: Se já estudou bastante, vamos ver o resultado!",
+                                "Prof. Meira: Boa sorte na prova!",
+                                "Prof. Meira: Você vai precisar!",
+                                "Prof. Meira: Hahahaha! >:)"
                             ])
-                        else:
+                        elif not has_pen and not conhecimento_suficiente:
                             professor.iniciar_dialogo([
-                                "Professor: Volte com pelo menos 40 de conhecimento",
-                                "e não esqueça da caneta!"
+                                "Prof. Meira: Sem caneta e sem estudar?",
+                                "Prof. Meira: Não tem chance assim!",
+                                "Prof. Meira: Volte quando estiver preparado."
                             ])
+                        elif not has_pen:
+                            professor.iniciar_dialogo([
+                                "Prof. Meira: Cadê sua caneta?",
+                                "Prof. Meira: Não entra na prova sem ela!"
+                            ])
+                        elif not conhecimento_suficiente:
+                            professor.iniciar_dialogo([
+                                "Prof. Meira: Você ainda não tem conhecimento suficiente!",
+                                "Prof. Meira: Estude mais e volte com pelo menos 40 pontos."
+                            ])
+
 
                 elif ev.key == pygame.K_RETURN and npc_prox and npc_prox.ativo:
                     npc_prox.avancar_dialogo()
@@ -622,16 +630,24 @@ def main():
         if end_screen:
             tela.fill((0, 0, 0))
             big_font = pygame.font.Font("PressStart2P.ttf", 48)
-            msg = "PARABÉNS, VOCÊ PASSOU!" if end_screen == "pass" else "VOCÊ BOMBOU EM ED!"
-            
-            txt = big_font.render(msg, True, (255, 255, 0) if end_screen == "pass" else (255, 0, 0))
+            nota_final = jogador.conhecimento
+
+            if end_screen == "pass":
+                msg = f"VOCÊ PASSOU EM ED COM {nota_final}"
+                cor = (255, 255, 0)
+            else:
+                msg = f"F! VOCÊ TOMOU PAU EM ED!"
+                cor = (255, 0, 0)
+
+            txt = big_font.render(msg, True, cor)
             tela.blit(txt, txt.get_rect(center=(LARGURA // 2, ALTURA // 2)))
             pygame.display.flip()
 
-            # Depois de 5 s volta ao menu
             if time.time() - evento_timer > 5:
-                restart_to_menu = True; rodando = False
-            continue   # pula o restante do loop
+                restart_to_menu = True
+                rodando = False
+            continue
+
 
         # ── ATUALIZAÇÕES NORMAIS ──
         fase = fases[fase_idx]
