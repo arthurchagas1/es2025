@@ -266,7 +266,7 @@ def run_dexter_interacao(surface):
     Exibe duas opções: [Fazer carinho] ou [Não fazer].
     Retorna True se o jogador fizer carinho.
     """
-    opcoes = ["Fazer carinho", "Não fazer"]
+    opcoes = ["Fazer carinho", "Ignora-lo"]
     sel = 0
     while True:
         for e in pygame.event.get():
