@@ -58,6 +58,15 @@ def load_bg(path:str):
         (LARGURA, ALTURA)
     )
 
+def desenhar_barra_conhecimento(surf,valor,max_val=100):
+    w,h=250,18
+    bx=LARGURA-w-20; by=20
+    pygame.draw.rect(surf,PRETO,(bx-2,by-2,w+4,h+4))
+    pygame.draw.rect(surf,BRANCO,(bx,by,w,h))
+    pct=valor/max_val
+    pygame.draw.rect(surf,VERDE,(bx+2,by+2,int((w-4)*pct),h-4))
+    surf.blit(fonte_hud.render(f"Conhecimento: {valor}/{max_val}",True,BRANCO),(bx,by+h+4))
+
 
 # ───────────── SPRITES ─────────────
 class Obstaculo(pygame.sprite.Sprite):
@@ -86,6 +95,7 @@ class Jogador(pygame.sprite.Sprite):
         self.image=anim["down"][0]
         self.rect=self.image.get_rect(center=(LARGURA//2,ALTURA//2))
         self.inv:List[tuple[str,pygame.Surface]]=[]
+        self.conhecimento=0 
     def coletar(self,item):
         if item.nome not in [n for n,_ in self.inv]:
             self.inv.append((item.nome,item.image))
@@ -187,43 +197,30 @@ class QuizQuestion:
 QUESTOES=[QuizQuestion("Quanto é 2 + 2?",["3","4","5","22"],1),
           QuizQuestion("Qual linguagem estamos usando?",["Java","C++","Python","Ruby"],2),
           QuizQuestion("Qual planeta é vermelho?",["Terra","Vênus","Marte","Júpiter"],2)]
-def run_quiz(surface)->bool:
+def run_quiz(surface)->int:
     perguntas=random.sample(QUESTOES,3); acertos=0
     for q in perguntas:
-        sel,answered,icon,t0=0,False,None,0
+        sel,done=0,False
         while True:
             for e in pygame.event.get():
-                
                 if e.type==pygame.QUIT: pygame.quit(); sys.exit()
-                if e.type==pygame.KEYDOWN and not answered:
-                    if e.key in (pygame.K_UP,pygame.K_w): sel=(sel-1)%len(q.opts)
+                if e.type==pygame.KEYDOWN and not done:
+                    if e.key in (pygame.K_UP,pygame.K_w):   sel=(sel-1)%len(q.opts)
                     elif e.key in (pygame.K_DOWN,pygame.K_s): sel=(sel+1)%len(q.opts)
                     elif e.key==pygame.K_RETURN:
-                        answered=True; correct=(sel==q.ans)
-                        icon=ICON_OK if correct else ICON_FAIL
-                        if correct: acertos+=1; t0=time.time()
+                        done=True
+                        if sel==q.ans: acertos+=1
+                        time.sleep(0.4)
             surface.fill((30,30,90))
             surface.blit(fonte_dialog.render(q.q,True,BRANCO),(60,80))
             for i,opt in enumerate(q.opts):
                 y=200+i*60
                 if i==sel: pygame.draw.rect(surface,AZUL_CLARO,(50,y-5,700,40))
                 surface.blit(fonte_dialog.render(opt,True,BRANCO),(60,y))
-            if answered:
-                surface.blit(icon,(800,200+sel*60))
-                if time.time()-t0>=1: break
             pygame.display.flip(); clock.tick(60)
-    passou=acertos>=2
-    msg = "Parabéns!" if passou else "Não foi dessa vez..."
-    cor = (0,200,0) if passou else (200,0,0)
-    t0=time.time()
-    while time.time()-t0<2:
-        for e in pygame.event.get():
-            if e.type==pygame.QUIT: pygame.quit(); sys.exit()
-            
-        surface.fill(PRETO)
-        surface.blit(fonte_dialog.render(msg,True,cor),((LARGURA-300)//2,ALTURA//2))
-        pygame.display.flip(); clock.tick(60)
-    return passou
+            if done: break
+    return acertos
+
 
 # ─── POSIÇÃO INICIAL ───
 def ajustar_posicao_inicial(j,obs):
@@ -410,10 +407,11 @@ def main():
                 break
 
         if quiz_pending:
-            res = run_quiz(tela)
-            evento_txt = "Evento A: Sucesso!" if res else "Evento B: Falha!"
-            evento_timer = time.time()
-            quiz_pending = False
+            acertos=run_quiz(tela)
+            ganho=acertos*10
+            jogador.conhecimento=min(jogador.conhecimento+ganho,100)
+            evento_txt = f"+{ganho} conhecimento!" if ganho else "Nenhum acerto..."
+            evento_timer=time.time(); quiz_pending=False
 
         tela.blit(fase["fundo"], (0, 0))
         grupo_obs.draw(tela)
@@ -469,7 +467,9 @@ def main():
 
         desenhar_inventario(tela, jogador.inv)
 
-        # 🟢 evento de missão
+        desenhar_inventario(tela,jogador.inv)
+        desenhar_barra_conhecimento(tela,jogador.conhecimento)
+
         if evento_txt and time.time() - evento_timer < 3:
             surf_txt = fonte_dialog.render(evento_txt, True, PRETO)
             w, h = surf_txt.get_size()
