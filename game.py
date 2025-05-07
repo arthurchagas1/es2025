@@ -545,6 +545,15 @@ def main():
                             "P: Então prove! Responda a esse quiz sobre o ICEx e a UFMG.",
                             "P: Só um verdadeiro estudante consegue passar!",
                             "Estou pronto!"
+                            "P: Bom dia, estudante!",
+                            "Bom dia Porteiro! Estou indo para a prova.",
+                            "Eu esqueci minha carteirinha, posso entrar?",
+                            "P: Não pode entrar sem carteirinha!",
+                            "P: Como vou saber se você é estudante?",
+                            "Não se preocupe, eu sou estudante sim! Eu posso provar!",
+                            "P: Então prove! Responda a esse quiz sobre o ICEx e a UFMG.",
+                            "P: Só um verdadeiro estudante consegue passar!",
+                            "Estou pronto!"
                         ])
 
                     elif npc_prox == natalie:
@@ -614,6 +623,7 @@ def main():
             tela.fill((0, 0, 0))
             big_font = pygame.font.Font("PressStart2P.ttf", 48)
             msg = "PARABÉNS, VOCÊ PASSOU!" if end_screen == "pass" else "VOCÊ BOMBOU EM ED!"
+            
             txt = big_font.render(msg, True, (255, 255, 0) if end_screen == "pass" else (255, 0, 0))
             tela.blit(txt, txt.get_rect(center=(LARGURA // 2, ALTURA // 2)))
             pygame.display.flip()
