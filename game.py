@@ -191,7 +191,7 @@ QUESTOES = [
     QuizQuestion("Qual linguagem estamos usando?", ["Java", "C++", "Python", "Ruby"], 2),
     QuizQuestion("Qual planeta é vermelho?", ["Terra", "Vênus", "Marte", "Júpiter"], 2)
 ]
-def run_quiz(surface) -> bool:
+def run_quiz(surface) -> int:
     perguntas = random.sample(QUESTOES, 3); acertos = 0
     for q in perguntas:
         sel, answered, icon, t0 = 0, False, None, 0
@@ -227,7 +227,7 @@ def run_quiz(surface) -> bool:
         surface.fill(PRETO)
         surface.blit(fonte_dialog.render(msg, True, cor), ((LARGURA - 300) // 2, ALTURA // 2))
         pygame.display.flip(); clock.tick(60)
-    return passou
+    return acertos
 
 # ─── POSIÇÃO INICIAL ───
 def ajustar_posicao_inicial(j, obs):
@@ -401,10 +401,16 @@ def main():
                 break
 
         if quiz_pending:
-            result = run_quiz(tela)
-            evento_txt   = "Evento A: Sucesso!" if result else "Evento B: Falha!"
+            acertos = run_quiz(tela)            # agora é um inteiro
+            ganho   = acertos * 10              # 10 pts por acerto (ajuste se quiser)
+            jogador.conhecimento = min(jogador.conhecimento + ganho, 100)
+
+            evento_txt = (
+                f"🎓 +{ganho} conhecimento!" if acertos else "Nenhum acerto..."
+            )
             evento_timer = time.time()
-            quiz_pending = False
+
+            quiz_pending = False            # <<< sem isso, o quiz roda pra sempre
 
         # ───────── DESENHO ─────────
         tela.blit(fase["fundo"], (0, 0))
