@@ -52,6 +52,7 @@ portaria_collision_mask = pygame.mask.from_threshold(
     (255,0,0),
     (50,50,50)
 )
+PLACA_IMG = pygame.image.load("sign.png").convert_alpha()
 
 
 # ────────── ASSET HELPERS ──────────
@@ -108,12 +109,12 @@ class Obstaculo(pygame.sprite.Sprite):
         self.rect=self.image.get_rect(topleft=(x,y))
 
 class Placa(pygame.sprite.Sprite):
-    def __init__(self,x,y,w,h,texto):
+    def __init__(self, x, y, texto):
         super().__init__()
-        self.image=pygame.Surface((w,h))
-        self.image.fill(VERDE)
-        self.rect=self.image.get_rect(topleft=(x,y))
-        self.texto=texto
+        self.image = pygame.transform.scale(PLACA_IMG, (64, 64))  # Adjust size if needed
+        self.rect = self.image.get_rect(center=(x, y))
+        self.texto = texto
+
 
 class Item(pygame.sprite.Sprite):
     def __init__(self,x,y,nome):
@@ -396,118 +397,119 @@ def main():
     quest_target = pygame.Rect(0, ALTURA // 2 - 200, 210, 300)
 
     fases = [
-    {
-        "fundo": load_bg("portaria.png"),
-        "collision_mask": load_collision_mask_from("portaria.png"),
-        "obstaculos": [],
-        "placas": [],
-        "itens": [],
-        "npcs": [porteiro],
-        "transicoes": [
-            {
-                "rect": pygame.Rect(0, 0, LARGURA, 5),
-                "dest": 1,
-                "spawn_side": "bottom"
-            }
-        ]
-    },
-    {
-        "fundo": load_bg("bolajardim.png"),
-        "collision_mask": load_collision_mask_from("bolajardim.png"),
-        "obstaculos": [],
-        "placas": [],
-        "itens": [],
-        "quest_target": quest_target,
-        "npcs": [],
-        "transicoes": [
-            {
-                "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
-                "dest": 0,
-                "spawn_side": "top"
-            },
-            {
-                "rect": pygame.Rect(0, 0, LARGURA, 5),
-                "dest": 2,
-                "spawn_side": "bottom"
-            }
-        ]
-    },
-    {
-        "fundo": load_bg("salas1.png"),
-        "collision_mask": load_collision_mask_from("salas1.png"),
-        "obstaculos": [],
-        "placas": [],
-        "itens": [],
-        "npcs": [ natalie ],
-        "transicoes": [
-        {   # sai pelo rodapé p/ Jardim/Bola
-            "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
-            "dest": 1,
-            "spawn_side": "top"
+        {
+            "fundo": load_bg("portaria.png"),
+            "collision_mask": load_collision_mask_from("portaria.png"),
+            "obstaculos": [],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Bem-vindo ao ICEx!\n")],
+            "itens": [],
+            "npcs": [porteiro],
+            "transicoes": [
+                {
+                    "rect": pygame.Rect(0, 0, LARGURA, 5),
+                    "dest": 1,
+                    "spawn_side": "bottom"
+                }
+            ]
         },
-        {   # ➜ NOVO: faixa de 5 px encostada no lado direito
-            "rect": pygame.Rect(LARGURA - 5, 0, 5, ALTURA),
-            "dest": 3,                # índice da salas2
-            "spawn_side": "left"      # o jogador entra pela esquerda
+        {
+            "fundo": load_bg("bolajardim.png"),
+            "collision_mask": load_collision_mask_from("bolajardim.png"),
+            "obstaculos": [],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Este é o famoso jardim da bola!")],
+            "itens": [],
+            "quest_target": quest_target,
+            "npcs": [],
+            "transicoes": [
+                {
+                    "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
+                    "dest": 0,
+                    "spawn_side": "top"
+                },
+                {
+                    "rect": pygame.Rect(0, 0, LARGURA, 5),
+                    "dest": 2,
+                    "spawn_side": "bottom"
+                }
+            ]
+        },
+        {
+            "fundo": load_bg("salas1.png"),
+            "collision_mask": load_collision_mask_from("salas1.png"),
+            "obstaculos": [],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Salas de aula – Encontre Natalie!")],
+            "itens": [],
+            "npcs": [natalie],
+            "transicoes": [
+                {
+                    "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
+                    "dest": 1,
+                    "spawn_side": "top"
+                },
+                {
+                    "rect": pygame.Rect(LARGURA - 5, 0, 5, ALTURA),
+                    "dest": 3,
+                    "spawn_side": "left"
+                }
+            ]
+        },
+        {
+            "fundo": load_bg("salas2.png"),
+            "collision_mask": load_collision_mask_from("salas2.png"),
+            "obstaculos": [],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Mais salas – Continue explorando!")],
+            "itens": [],
+            "npcs": [],
+            "transicoes": [
+                {
+                    "rect": pygame.Rect(0, 0, 5, ALTURA),
+                    "dest": 2,
+                    "spawn_side": "right"
+                },
+                {
+                    "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
+                    "dest": 4,
+                    "spawn_side": "top"
+                }
+            ]
+        },
+        {
+            "fundo": load_bg("jardim2.png"),
+            "collision_mask": load_collision_mask_from("jardim2.png"),
+            "obstaculos": [],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Um lugar tranquilo...\nDexter está por aqui.")],
+            "itens": [],
+            "npcs": [dexter],
+            "transicoes": [
+                {
+                    "rect": pygame.Rect(0, 0, LARGURA, 5),
+                    "dest": 3,
+                    "spawn_side": "bottom"
+                },
+                {
+                    "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
+                    "dest": 5,
+                    "spawn_side": "top"
+                }
+            ]
+        },
+        {
+            "fundo": load_bg("corredorfinal.png"),
+            "collision_mask": load_collision_mask_from("corredorfinal.png"),
+            "obstaculos": [],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Corredor final.\nBoa sorte na prova!")],
+            "itens": [],
+            "npcs": [],
+            "transicoes": [
+                {
+                    "rect": pygame.Rect(0, 0, LARGURA, 5),
+                    "dest": 4,
+                    "spawn_side": "bottom"
+                }
+            ]
         }
-    ]
-    },
-    {
-        "fundo": load_bg("salas2.png"),
-        "collision_mask": load_collision_mask_from("salas2.png"),
-        "obstaculos": [],
-        "placas": [],
-        "itens": [],
-        "npcs": [],
-        "transicoes": [
-            {
-                "rect": pygame.Rect(0, 0, 5, ALTURA),
-                "dest": 2,
-                "spawn_side": "right"
-            },
-            {
-                "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
-                "dest": 4,
-                "spawn_side": "top"
-            }
-        ]
-    },
-    {
-        "fundo": load_bg("jardim2.png"),
-        "collision_mask": load_collision_mask_from("jardim2.png"),
-        "obstaculos": [],
-        "placas": [],
-        "itens": [],
-        "npcs": [ dexter ],
-        "transicoes": [
-            {
-                "rect": pygame.Rect(0, 0, LARGURA, 5),
-                "dest": 3,
-                "spawn_side": "bottom"
-            },
-            {
-                "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
-                "dest": 5,
-                "spawn_side": "top"
-            }
-        ]
-    },
-    {
-        "fundo": load_bg("corredorfinal.png"),
-        "collision_mask": load_collision_mask_from("corredorfinal.png"),
-        "obstaculos": [],
-        "placas": [],
-        "itens": [],
-        "npcs": [],
-        "transicoes": [
-            {
-                "rect": pygame.Rect(0, 0, LARGURA, 5),
-                "dest": 4,
-                "spawn_side": "bottom"
-            }
-        ]
-    }
 ]
+
 
     fase_idx = 0
     ajustar_posicao_inicial(jogador, fases[0]["obstaculos"])
