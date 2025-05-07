@@ -522,11 +522,11 @@ def main():
                     if npc_prox.tipo == "dexter" and not dexter_interacted:
                         fez_carinho = run_dexter_interacao(tela)
                         if fez_carinho:
-                            jogador.conhecimento = min(jogador.conhecimento + 40, 100)
-                            evento_txt = "+40 conhecimento! Dexter está feliz!"
+                            jogador.conhecimento = min(jogador.conhecimento + 25, 100)
+                            evento_txt = "+25 conhecimento! Dexter está feliz!"
                             npc_prox.iniciar_dialogo([
                                 "Dexter ficou feliz com o carinho!",
-                                "Ele te deu um resumo de ED (+40 conhecimento)."
+                                "Ele te deu um resumo de ED (+25 conhecimento)."
                             ])
                             jogador.coletar(Item(0, 0, "Resumo de ED"))
                         else:
@@ -536,11 +536,15 @@ def main():
 
                     elif npc_prox == porteiro:
                         porteiro.iniciar_dialogo([
-                            "P: Bom dia!",
-                            "Bom dia! Estou indo para a prova.",
-                            "P: Sem carteirinha não entra!",
-                            "Eu consigo provar que sou aluno — mande o quiz!",
-                            "P: Então responda e prove!"
+                            "P: Bom dia, estudante!",
+                            "Bom dia Porteiro! Estou indo para a prova.",
+                            "Eu esqueci minha carteirinha, posso entrar?",
+                            "P: Não pode entrar sem carteirinha!",
+                            "P: Como vou saber se você é estudante?",
+                            "Não se preocupe, eu sou estudante sim! Eu posso provar!",
+                            "P: Então prove! Responda a esse quiz sobre o ICEx e a UFMG.",
+                            "P: Só um verdadeiro estudante consegue passar!",
+                            "Estou pronto!"
                         ])
 
                     elif npc_prox == natalie:
@@ -671,8 +675,8 @@ def main():
         grupo_obs.draw(tela); grupo_itm.draw(tela)
         grupo_pla.draw(tela); grupo_npc.draw(tela); grupo_jog.draw(tela)
 
-        if quest_state == "in_progress":
-            pygame.draw.rect(tela, (255, 255, 0), quest_target, 2)
+        #if quest_state == "in_progress":
+        #    pygame.draw.rect(tela, (255, 255, 0), quest_target, 2)
 
         # Proximidades
         placa_prox = next((p for p in grupo_pla if jogador.rect.colliderect(p.rect.inflate(40, 40))), None)
