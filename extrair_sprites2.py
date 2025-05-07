@@ -10,7 +10,7 @@ def extrair_sprites(
         rows: int = 3,           # ← quantas LINHAS você quer extrair
         cols: int = 3,           # ← quantas COLUNAS você quer extrair
         start_row: int = 0,      # ← caso queira pular linhas no topo da sheet
-        save_folder: str = "animacoes3"
+        save_folder: str = "animacoes_dexter"
     ) -> None:
     """
     Recorta sprites de uma sprite‑sheet e salva cada frame como PNG.

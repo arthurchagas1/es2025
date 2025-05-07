@@ -145,6 +145,8 @@ class NPC(pygame.sprite.Sprite):
         self.falas:list[str]=[]
         self.idx=0
         self.ativo=False
+        # Propriedade para identificar NPCs especiais
+        self.tipo = None
     def iniciar_dialogo(self, falas:list[str]):
         self.falas=falas
         self.idx=0
@@ -266,7 +268,7 @@ def run_dexter_interacao(surface):
     Exibe duas opções: [Fazer carinho] ou [Não fazer].
     Retorna True se o jogador fizer carinho.
     """
-    opcoes = ["Fazer carinho", "Ignora-lo"]
+    opcoes = ["Fazer carinho", "Ignorá-lo"]
     sel = 0
     while True:
         for e in pygame.event.get():
@@ -324,8 +326,10 @@ def main():
     natalie = NPC(9 * LARGURA / 10, 1 * ALTURA / 10, natalie_sprite)
     
     # ─── ADDED: Dexter NPC ───
-    dexter_sprite = load_npc_sprite("frame_3.png", scale=0.035, folder="animacoes3")
+    dexter_sprite = load_npc_sprite("frame_3.png", scale=0.035, folder="animacoes_dexter")
     dexter = NPC(400, 500, dexter_sprite)
+    # Marca o Dexter como um NPC especial
+    dexter.tipo = "dexter"
     dexter_interacted = False
 
     # Load single porteiro image
@@ -438,7 +442,21 @@ def main():
                 elif ev.key == pygame.K_RETURN and lendo_placa:
                     lendo_placa = False
                 elif ev.key == pygame.K_e and npc_prox and not npc_prox.ativo and not lendo_placa:
-                    if npc_prox == porteiro:
+                    # Tratando interação específica com o Dexter
+                    if npc_prox.tipo == "dexter" and not dexter_interacted:
+                        fez_carinho = run_dexter_interacao(tela)
+                        if fez_carinho:
+                            jogador.conhecimento = min(jogador.conhecimento + 25, 100)
+                            evento_txt = "+25 conhecimento! Dexter está feliz!"
+                            npc_prox.iniciar_dialogo(["Dexter está feliz com o carinho!", 
+                                                     "Você ganhou +25 de conhecimento!"])
+                            jogador.coletar(Item(0, 0, "Resumo de ED"))
+                        else:
+                            evento_txt = "Dexter parece um pouco triste..."
+                            npc_prox.iniciar_dialogo(["Dexter parece triste por não receber carinho."])
+                        evento_timer = time.time()
+                        dexter_interacted = True
+                    elif npc_prox == porteiro:
                         porteiro.iniciar_dialogo([
                             "P: Bom dia, estudante!",
                             "Bom dia Porteiro! Estou indo para a prova.",
