@@ -40,18 +40,15 @@ def render_text_with_border(text: str, fg, border, font, border_size=2):
 
 def show_welcome_onibus(fundo):
     popup_w, popup_h = 800, 300
-    # Painel de madeira
     popup = pygame.transform.scale(wood_tex, (popup_w, popup_h))
     pygame.draw.rect(popup, PRETO, popup.get_rect(), 4)
 
-    # Texto quebrado em linhas
     linhas = [
         "Bem vindo ao jogo,",
         "ao sair do onibus voce entrara",
         "nos dominios da ufmg onde voce",
         "tera diversas missoes"
     ]
-    # Renderiza cada linha com borda
     for i, l in enumerate(linhas):
         txt = render_text_with_border(l, BRANCO, PRETO, pixel_font, border_size=2)
         popup.blit(txt, (20, 20 + i * (pixel_font.get_height() + 8)))
@@ -66,17 +63,20 @@ def show_welcome_onibus(fundo):
             if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
                 esperando = False
 
-        # Desenha fundo do ônibus escurecido
         tela.blit(fundo, (0, 0))
         overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         tela.blit(overlay, (0, 0))
-
-        # Desenha popup
         tela.blit(popup, rect.topleft)
         pygame.display.flip()
         clock.tick(60)
 
+# -------------- CARREGANDO O MASK DE COLISÃO --------------
+raw_mask = pygame.image.load("onibus_mask.png").convert()
+# redimensiona para exatamente o mesmo tamanho do fundo (LARGURA×ALTURA)
+mask_surf = pygame.transform.scale(raw_mask, (LARGURA, ALTURA))
+# gera a máscara considerando tons próximos ao vermelho
+collision_mask = pygame.mask.from_threshold(mask_surf, (255,0,0), (50,50,50))
 
 # -------------- CARREGANDO AS IMAGENS ANIMADAS --------------
 def load_animation_frames(folder="animacoes", scale_factor=0.45):
@@ -101,8 +101,11 @@ class Jogador(pygame.sprite.Sprite):
         self.frame_index       = 0
         self.frame_speed       = 0.15
         self.image             = animations["down"][0]
-        self.rect              = self.image.get_rect(center=(LARGURA//2, ALTURA//2))
+        # exemplo: 75% da altura da tela
+        self.rect = self.image.get_rect(center=(LARGURA//2.3, int(ALTURA * 0.85)))
+
         self.velocidade        = 5
+        self.mask              = pygame.mask.from_surface(self.image)
 
     def update(self, teclas):
         old = self.rect.copy()
@@ -116,31 +119,31 @@ class Jogador(pygame.sprite.Sprite):
         elif teclas[pygame.K_DOWN]:
             self.rect.y += self.velocidade; self.current_direction = "down";  mov = True
 
-        # mantém dentro das bordas superior, inferior e direita
+        # Mantém dentro das bordas superior, inferior e direita
         self.rect.clamp_ip(pygame.Rect(0, 0, LARGURA, ALTURA))
 
-        # animação
+        # Animação
         if mov:
             seq = self.animations[self.current_direction]
             self.frame_index = (self.frame_index + self.frame_speed) % len(seq)
         else:
             self.frame_index = 0
         self.image = self.animations[self.current_direction][int(self.frame_index)]
+        # Atualiza máscara do jogador
+        self.mask = pygame.mask.from_surface(self.image)
+
+        # Colisão pixel-a-pixel: se sobrepor ao collision_mask, reverte
+        if collision_mask.overlap(self.mask, (self.rect.x, self.rect.y)):
+            self.rect = old
 
 def main():
-   # carrega fundo
-    fundo = pygame.transform.scale(
-        pygame.image.load("onibus.png").convert(),
-        (LARGURA, ALTURA)
-    )
-
-    # exibe popup de boas-vindas
+    # Carrega fundo e exibe boas-vindas
+    fundo = pygame.transform.scale(pygame.image.load("onibus.png").convert(), (LARGURA, ALTURA))
     show_welcome_onibus(fundo)
 
-    # continua com o resto do main...
-    animations = load_animation_frames("animacoes", scale_factor=0.45)
-    jogador    = Jogador(animations)
-    grupo      = pygame.sprite.Group(jogador)
+    animations  = load_animation_frames("animacoes", scale_factor=0.21)
+    jogador     = Jogador(animations)
+    grupo       = pygame.sprite.Group(jogador)
     asking_exit = False
 
     rodando = True
@@ -149,43 +152,39 @@ def main():
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 rodando = False
-
-            # se estiver no prompt de saída, espera S ou N
             if asking_exit and e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_s:      # 'S' para Sim
+                if e.key == pygame.K_s:
                     game.main()
                     return
-                elif e.key == pygame.K_n:    # 'N' para Não
+                elif e.key == pygame.K_n:
                     asking_exit = False
 
+        teclas = pygame.key.get_pressed()
         if not asking_exit:
-            teclas = pygame.key.get_pressed()
             jogador.update(teclas)
             # se tentar sair para a esquerda
             if jogador.rect.left <= 0:
-                # trava na borda e abre prompt
                 jogador.rect.left = 0
                 asking_exit = True
 
-        # desenha cenário e jogador
+        # Desenha cenário e jogador
         tela.blit(fundo, (0, 0))
+
+        mask_surf = collision_mask.to_surface(setcolor=(255,0,0), unsetcolor=(0,0,0,0))
+        mask_surf.set_alpha(0)
+        tela.blit(mask_surf, (0, 0))
         grupo.draw(tela)
 
-        # se no prompt, desenha a janelinha
+        # Prompt de saída
         if asking_exit:
             w, h = 700, 200
-            # fundo de madeira
             popup = pygame.transform.scale(wood_tex, (w, h))
-            rect  = popup.get_rect(center=(LARGURA//2, ALTURA//2))
-            # borda preta
             pygame.draw.rect(popup, PRETO, popup.get_rect(), 2)
-
-            # textos em branco com borda preta
             txt1 = render_text_with_border("Deseja ir para a UFMG?", BRANCO, PRETO, pixel_font, border_size=2)
             txt2 = render_text_with_border("S: Sim    N: Não",        BRANCO, PRETO, pixel_font, border_size=2)
-
             popup.blit(txt1, ((w - txt1.get_width()) // 2,  50))
             popup.blit(txt2, ((w - txt2.get_width()) // 2, 120))
+            rect = popup.get_rect(center=(LARGURA//2, ALTURA//2))
             tela.blit(popup, rect.topleft)
 
         pygame.display.flip()
