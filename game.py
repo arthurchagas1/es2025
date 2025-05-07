@@ -545,19 +545,25 @@ def main():
 
                     elif npc_prox == natalie:
                         if quest_state == "not_started":
-                            natalie.iniciar_dialogo([
-                                "Natalie! Preciso de uma caneta urgente.",
-                                "N: Primeiro tire uma foto na bola do ICEx.",
-                                "N: Pegue a minha câmera e depois me mostre!",
-                                "N: A caneta é sua se trouxer a foto."
-                            ])
+                            falas = [
+                                "Natalie! Que bom que você está aqui, tenho uma prova agora,\npreciso muito de uma caneta emprestada…",
+                                "N: Oi meu amor, eu tenho uma caneta da boa bem aqui, mas antes,\npreciso que você me ajude: tire uma foto na bola do ICEx!",
+                                "N: Depois, volte aqui e me mostre!",
+                                "Ok, vou tirar a foto e já volto!",
+                                "N: Ah, e não esquece de pegar a câmera na minha mochila!"
+                            ]
+                            natalie.iniciar_dialogo(falas)
+
                         elif quest_state == "in_progress":
-                            natalie.iniciar_dialogo(["Ainda não vi a foto!"])
+                            natalie.iniciar_dialogo(["Você ainda não tirou a foto!"])
+
                         elif quest_state == "photo_taken":
                             natalie.iniciar_dialogo([
-                                "Uau! Foto perfeita.",
-                                "Aqui está sua caneta — boa sorte!"
+                                "Uau, ficou ótima!",
+                                "Aqui está sua caneta",
+                                "Boa prova!"
                             ])
+
                         else:
                             natalie.iniciar_dialogo(["Boa sorte na prova!"])
 
