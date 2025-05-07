@@ -27,6 +27,17 @@ WOOD_IMG  = pygame.image.load("wood.png").convert()
 ICON_OK   = pygame.transform.scale(pygame.image.load("ok.png").convert_alpha(),   (40,40))
 ICON_FAIL = pygame.transform.scale(pygame.image.load("fail.png").convert_alpha(), (40,40))
 
+# ───────── COLISÃO PIXEL-A-PIXEL: PORTARIA ─────────
+raw_portaria_mask   = pygame.image.load("portaria_mask.png").convert()
+portaria_mask_surf  = pygame.transform.scale(raw_portaria_mask, (LARGURA, ALTURA))
+# tol = (50,50,50) → considera qualquer tom 'quase-vermelho'
+portaria_collision_mask = pygame.mask.from_threshold(
+    portaria_mask_surf,
+    (255,0,0),
+    (50,50,50)
+)
+
+
 # ────────── ASSET HELPERS ──────────
 def load_animation_frames(folder="animacoes", scale=0.15):
     frames=[]
@@ -110,25 +121,13 @@ class Jogador(pygame.sprite.Sprite):
     def remover(self, nome:str):
         self.inv = [(n, ic) for n, ic in self.inv if n != nome]
 
-    def update(self,keys,obs):
-        old=self.rect.copy()
-        moving=False
-        if keys[pygame.K_LEFT]:  
-            self.rect.x-=self.speed
-            self.dir="left"
-            moving=True
-        elif keys[pygame.K_RIGHT]:
-            self.rect.x+=self.speed
-            self.dir="right"
-            moving=True
-        elif keys[pygame.K_UP]:
-            self.rect.y-=self.speed
-            self.dir="up"
-            moving=True
-        elif keys[pygame.K_DOWN]:
-            self.rect.y+=self.speed
-            self.dir="down"
-            moving=True
+    def update(self, keys, obs, collision_mask):
+
+        old=self.rect.copy(); moving=False
+        if keys[pygame.K_LEFT]:  self.rect.x-=self.speed; self.dir="left";  moving=True
+        elif keys[pygame.K_RIGHT]:self.rect.x+=self.speed; self.dir="right"; moving=True
+        elif keys[pygame.K_UP]:  self.rect.y-=self.speed; self.dir="up";    moving=True
+        elif keys[pygame.K_DOWN]:self.rect.y+=self.speed; self.dir="down";  moving=True
         for o in obs:
             if self.rect.colliderect(o.rect):
                 self.rect=old
@@ -136,6 +135,12 @@ class Jogador(pygame.sprite.Sprite):
         self.rect.clamp_ip(pygame.Rect(0,0,LARGURA,ALTURA))
         self.idx=(self.idx+0.15)%len(self.anim[self.dir]) if moving else 0
         self.image=self.anim[self.dir][int(self.idx)]
+            # atualiza máscara do sprite
+        self.mask = pygame.mask.from_surface(self.image)
+        # se sobrepõe ao vermelho, volta atrás
+        if collision_mask.overlap(self.mask, (self.rect.x, self.rect.y)):
+            self.rect = old
+
 
 class NPC(pygame.sprite.Sprite):
     def __init__(self,x,y,image):
@@ -332,11 +337,14 @@ def main():
 
     fases = [
         {
-            "fundo": load_bg("portaria.png"),
-            "obstaculos": [], "placas": [], "itens": [], "npcs": [],
-            "transicoes": [
-                {"rect": pygame.Rect(0, 0, LARGURA, 5), "dest": 1, "spawn_side": "bottom"}
-            ]
+            "fundo":       load_bg("portaria.png"),
+            "collision_mask": portaria_collision_mask,   # ← aqui
+            "obstaculos":  [],
+            "placas":      [],
+            "itens":       [],
+            "npcs":        [],
+            "transicoes":  [ { "rect": pygame.Rect(0,0,LARGURA,5),
+                            "dest": 1, "spawn_side": "bottom" } ]
         },
         {
             "fundo": load_bg("bolajardim.png"),
@@ -484,7 +492,8 @@ def main():
 
         keys = pygame.key.get_pressed()
         if not (lendo_placa or quiz_pending or (npc_prox and npc_prox.ativo)):
-            jogador.update(keys, fase["obstaculos"])
+            jogador.update(keys, fase["obstaculos"], fase["collision_mask"])
+
 
         dentro_area_foto = (
             quest_state == "in_progress"
