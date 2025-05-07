@@ -76,6 +76,7 @@ def make_back_button():
 def tela_config(bg_surface=None):
     """
     Se bg_surface != None → modo pausa (frame congelado ao fundo)
+    Antes havia botão "Menu Inicial" aqui, mas foi removido.
     Retorna "menu" se o jogador escolher voltar ao menu inicial,
     ou None caso contrário.
     """
@@ -89,51 +90,60 @@ def tela_config(bg_surface=None):
     title_r = title.get_rect(center=(WIDTH/2, HEIGHT/3 - 40))
 
     back_surf, back_txt_r, back_btn, esc_surf, esc_rect = make_back_button()
-    # botão "Menu Inicial" só no modo pausa
-    if bg_surface is not None:
-        menu_surf, menu_txt_r, menu_btn = make_button("Menu Inicial", (WIDTH/2, HEIGHT/2 + 180))
+
+    # Removido: criação do botão "Menu Inicial"
 
     def draw_bg():
         if bg_surface is None:
             screen.blit(pygame.transform.scale(background, (WIDTH, HEIGHT)), (0,0))
         else:
             screen.blit(bg_surface, (0,0))
-            dim = pygame.Surface((WIDTH,HEIGHT), pygame.SRCALPHA); dim.fill((0,0,0,180))
+            dim = pygame.Surface((WIDTH,HEIGHT), pygame.SRCALPHA)
+            dim.fill((0,0,0,180))
             screen.blit(dim,(0,0))
 
-    def x_to_vol(x): return max(0,min(1,(x - bar.left)/bar.width))
+    def x_to_vol(x): 
+        return max(0, min(1, (x - bar.left)/bar.width))
 
     while True:
         for ev in pygame.event.get():
-            if ev.type == pygame.QUIT: pygame.quit(); sys.exit()
+            if ev.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
             if ev.type == pygame.KEYDOWN:
                 if ev.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                     return
-                if ev.key == pygame.K_LEFT:  volume=max(0,volume-0.05)
-                if ev.key == pygame.K_RIGHT: volume=min(1,volume+0.05)
-                if ev.key == pygame.K_m and bg_surface is not None:
-                    return "menu"
+                if ev.key == pygame.K_LEFT:
+                    volume = max(0, volume-0.05)
+                if ev.key == pygame.K_RIGHT:
+                    volume = min(1, volume+0.05)
+                # Removido: retorno "menu" ao apertar 'm' no modo pausa
                 knob_x = bar.left + int(volume*bar.width)
                 pygame.mixer.music.set_volume(volume)
             if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
-                if back_btn.collidepoint(ev.pos): return
-                if bg_surface is not None and menu_btn.collidepoint(ev.pos): return "menu"
+                if back_btn.collidepoint(ev.pos):
+                    return
+                # Removido: lógica do botão "Menu Inicial"
                 if (pygame.Vector2(ev.pos)-pygame.Vector2(knob_x, bar.centery)).length()<=knob_r:
                     dragging = True
                 elif bar.collidepoint(ev.pos):
-                    knob_x = ev.pos[0]; volume = x_to_vol(knob_x); pygame.mixer.music.set_volume(volume)
+                    knob_x = ev.pos[0]
+                    volume = x_to_vol(knob_x)
+                    pygame.mixer.music.set_volume(volume)
             if ev.type == pygame.MOUSEBUTTONUP and ev.button == 1:
                 dragging = False
             if ev.type == pygame.MOUSEMOTION and dragging:
                 knob_x = max(bar.left, min(ev.pos[0], bar.right))
-                volume = x_to_vol(knob_x); pygame.mixer.music.set_volume(volume)
+                volume = x_to_vol(knob_x)
+                pygame.mixer.music.set_volume(volume)
 
         # --- desenho ---
         draw_bg()
         screen.blit(title, title_r)
 
         pygame.draw.rect(screen, (80,80,80), bar, border_radius=6)
-        filled = bar.copy(); filled.width = knob_x - bar.left
+        filled = bar.copy()
+        filled.width = knob_x - bar.left
         pygame.draw.rect(screen, (0,255,0), filled, border_radius=6)
         pygame.draw.circle(screen, BRANCO, (knob_x, bar.centery), knob_r)
         pygame.draw.circle(screen, PRETO,  (knob_x, bar.centery), knob_r, 2)
@@ -143,16 +153,13 @@ def tela_config(bg_surface=None):
 
         pygame.draw.rect(screen, BTN_NORMAL, back_btn, border_radius=6)
         pygame.draw.rect(screen, PRETO, back_btn, 2, border_radius=6)
-        screen.blit(back_surf, back_txt_r); screen.blit(esc_surf, esc_rect)
+        screen.blit(back_surf, back_txt_r)
+        screen.blit(esc_surf, esc_rect)
 
-        if bg_surface is not None:
-            mouse = pygame.mouse.get_pos()
-            col = BTN_HOVER if menu_btn.collidepoint(mouse) else BTN_NORMAL
-            pygame.draw.rect(screen, col, menu_btn, border_radius=10)
-            pygame.draw.rect(screen, PRETO, menu_btn, 2, border_radius=10)
-            screen.blit(menu_surf, menu_txt_r)
+        # Removido: desenho do botão "Menu Inicial"
 
-        pygame.display.flip(); clock.tick(60)
+        pygame.display.flip()
+        clock.tick(60)
 
 # ─── MENU INICIAL ───────────────────────────────────
 def tela_menu():
