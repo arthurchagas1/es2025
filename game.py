@@ -688,12 +688,23 @@ def main():
 
         # Quiz do porteiro
         if quiz_pending:
-            acertos, _ = run_quiz(tela)
+            acertos, passou = run_quiz(tela)
             ganho = acertos * 10
             jogador.conhecimento = min(jogador.conhecimento + ganho, 100)
-            evento_txt = (f"{acertos}/5 corretas! +{ganho} conhecimento!"
-                          if acertos >= 3 else f"{acertos}/5 corretas. Tente de novo!")
-            evento_timer = time.time(); quiz_pending = False
+
+            if passou:
+                # Atualiza a máscara da portaria após passar no quiz
+                raw_mask2 = pygame.image.load("portaria_mask2.png").convert()
+                portaria_mask_surf2 = pygame.transform.scale(raw_mask2, (LARGURA, ALTURA))
+                portaria_collision_mask = pygame.mask.from_threshold(portaria_mask_surf2, (255, 0, 0), (50, 50, 50))
+                fases[0]["collision_mask"] = portaria_collision_mask
+                evento_txt = f"{acertos}/5 corretas! +{ganho} conhecimento! Portão liberado!"
+            else:
+                evento_txt = f"{acertos}/5 corretas. Tente de novo!"
+
+            evento_timer = time.time()
+            quiz_pending = False
+
 
         # ── DESENHO DA FASE ──
         tela.blit(fase["fundo"], (0, 0))
