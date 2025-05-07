@@ -448,7 +448,7 @@ def main():
                         if fez_carinho:
                             jogador.conhecimento = min(jogador.conhecimento + 25, 100)
                             evento_txt = "+25 conhecimento! Dexter está feliz!"
-                            npc_prox.iniciar_dialogo(["Dexter está feliz com o carinho!", 
+                            npc_prox.iniciar_dialogo(["Dexter está feliz com o carinho! Ele te entregou o resumo de ED que estava mastigando!", 
                                                      "Você ganhou +25 de conhecimento!"])
                             jogador.coletar(Item(0, 0, "Resumo de ED"))
                         else:
