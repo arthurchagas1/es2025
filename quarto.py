@@ -115,10 +115,13 @@ def show_intro():
     linhas = [
         "Você acorda no seu quarto após",
         "uma longa noite de sono, devido",
-        "a uma feijoada na casa da sua vó",
-        "você acorda 7h30 extremamente",
-        "atrasado para a primeira aula.",
-        "Saia do seu quarto para ir para a aula."
+        "a uma feijoada na casa da sua", 
+        "avó, na sexta-feira passada,",
+        "você acorda 13:45, extremamente",
+        "atrasado pro especial de ED",
+        "que começa pontualmente às 14:00.",
+        "Melhor ir correndo para a UFMG!",
+        "O ônibus sai em 5 minutos!!!"
     ]
     for i, l in enumerate(linhas):
         txt = render_text_with_border(l, BRANCO, PRETO, 2)

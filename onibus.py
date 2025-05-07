@@ -44,10 +44,17 @@ def show_welcome_onibus(fundo):
     pygame.draw.rect(popup, PRETO, popup.get_rect(), 4)
 
     linhas = [
-        "Bem vindo ao jogo,",
-        "ao sair do onibus voce entrara",
-        "nos dominios da ufmg onde voce",
-        "tera diversas missoes"
+        "Meu Deus, eu saí com tanta pressa que esqueci",
+        "todos os meus materiais em casa! Inclusive",
+        "minha carteirinha. Será que vou conseguir",
+        "materiais emprestados lá? E se eu não",
+        "conseguir entrar no ICEx? Vou perder a prova!",
+        "!!!",
+        "Ai ai... Muitas preocupações.",
+        "Mas não posso deixar isso me abalar.",
+        "...",
+        "Acelera esse ônibus, motorista!",
+        "Eu tenho que chegar a tempo!",
     ]
     for i, l in enumerate(linhas):
         txt = render_text_with_border(l, BRANCO, PRETO, pixel_font, border_size=2)
