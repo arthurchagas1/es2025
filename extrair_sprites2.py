@@ -7,10 +7,10 @@ pygame.display.set_mode((1, 1))
 
 def extrair_sprites(
         sheet_path: str,
-        rows: int = 3,           # ← quantas LINHAS você quer extrair
-        cols: int = 3,           # ← quantas COLUNAS você quer extrair
+        rows: int = 4,           # ← quantas LINHAS você quer extrair
+        cols: int = 6,           # ← quantas COLUNAS você quer extrair
         start_row: int = 0,      # ← caso queira pular linhas no topo da sheet
-        save_folder: str = "animacoes_dexter"
+        save_folder: str = "animacoes_meira"
     ) -> None:
     """
     Recorta sprites de uma sprite‑sheet e salva cada frame como PNG.
@@ -58,6 +58,6 @@ def extrair_sprites(
 
 
 if __name__ == "__main__":
-    sprite_sheet = "dexter.png"          # <-- altere para o nome correto do arquivo
-    extrair_sprites(sprite_sheet, rows=3, cols=3)  # ← 28 sprites (4×7)
+    sprite_sheet = "meira.png"          # <-- altere para o nome correto do arquivo
+    extrair_sprites(sprite_sheet, rows=4, cols=6)  # ← 28 sprites (4×7)
     pygame.quit()
