@@ -522,11 +522,11 @@ def main():
                     if npc_prox.tipo == "dexter" and not dexter_interacted:
                         fez_carinho = run_dexter_interacao(tela)
                         if fez_carinho:
-                            jogador.conhecimento = min(jogador.conhecimento + 25, 100)
-                            evento_txt = "+25 conhecimento! Dexter está feliz!"
+                            jogador.conhecimento = min(jogador.conhecimento + 40, 100)
+                            evento_txt = "+40 conhecimento! Dexter está feliz!"
                             npc_prox.iniciar_dialogo([
                                 "Dexter ficou feliz com o carinho!",
-                                "Ele te deu um resumo de ED (+25 conhecimento)."
+                                "Ele te deu um resumo de ED (+40 conhecimento)."
                             ])
                             jogador.coletar(Item(0, 0, "Resumo de ED"))
                         else:
@@ -610,6 +610,7 @@ def main():
             tela.fill((0, 0, 0))
             big_font = pygame.font.Font("PressStart2P.ttf", 48)
             msg = "PARABÉNS, VOCÊ PASSOU!" if end_screen == "pass" else "VOCÊ BOMBOU EM ED!"
+            
             txt = big_font.render(msg, True, (255, 255, 0) if end_screen == "pass" else (255, 0, 0))
             tela.blit(txt, txt.get_rect(center=(LARGURA // 2, ALTURA // 2)))
             pygame.display.flip()
