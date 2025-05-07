@@ -9,6 +9,19 @@ LARGURA, ALTURA = 1200, 800
 tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("Jogo 2D – itens + quiz")
 
+# ─── no topo do arquivo, logo após definir LARGURA/ALTURA ───
+# função helper para carregar qualquer “nome.png” e seu “nome_mask.png”
+def load_collision_mask_from(bg_filename, tol=(50,50,50)):
+    # troca “.png” por “_mask.png”
+    mask_filename = bg_filename.replace(".png", "_mask.png")
+    raw = pygame.image.load(mask_filename).convert()
+    scaled = pygame.transform.scale(raw, (LARGURA, ALTURA))
+    return pygame.mask.from_threshold(scaled, (255,0,0), tol)
+
+# máscara “vazia” para fallback (caso alguma fase não tenha mask)
+default_mask = pygame.mask.Mask((LARGURA, ALTURA), fill=False)
+
+
 BRANCO, CINZA   = (255,255,255), (100,100,100)
 PRETO, VERDE    = (0,0,0), (0,255,0)
 AZUL_CLARO      = (150,200,255)
@@ -110,46 +123,66 @@ class Item(pygame.sprite.Sprite):
         self.rect=self.image.get_rect(topleft=(x,y))
 
 class Jogador(pygame.sprite.Sprite):
-    def __init__(self,anim):
+    def __init__(self, anim):
         super().__init__()
-        self.anim, self.dir, self.idx = anim,"down",0
-        self.speed=5
-        self.image=anim["down"][0]
-        self.rect=self.image.get_rect(center=(LARGURA//2,ALTURA//2))
-        self.inv:List[tuple[str,pygame.Surface]]=[]
-        self.conhecimento=0 
-    def coletar(self,item):
-        if item.nome not in [n for n,_ in self.inv]:
-            self.inv.append((item.nome,item.image))
-    def remover(self, nome:str):
+        self.anim         = anim
+        self.dir          = "down"
+        self.idx          = 0
+        self.speed        = 5
+        self.image        = anim["down"][0]
+        self.rect         = self.image.get_rect(center=(LARGURA//2, ALTURA//2))
+        # inventário: lista de tuples (nome, Surface)
+        self.inv: List[tuple[str, pygame.Surface]] = []
+        self.conhecimento = 0
+
+    def coletar(self, item):
+        """Adiciona item ao inventário, se ainda não estiver lá."""
+        nomes = [n for n, _ in self.inv]
+        if item.nome not in nomes:
+            self.inv.append((item.nome, item.image))
+            # opcional: ganha conhecimento por item
+            self.conhecimento = min(self.conhecimento + 5, 100)
+
+    def remover(self, nome: str):
+        """Remove do inventário o item com esse nome."""
         self.inv = [(n, ic) for n, ic in self.inv if n != nome]
 
-    def update(self,keys,obs):
-        old=self.rect.copy()
-        moving=False
-        if keys[pygame.K_LEFT]:  
-            self.rect.x-=self.speed
-            self.dir="left"
-            moving=True
+    def update(self, keys, obstaculos: List[Obstaculo], collision_mask: pygame.Mask):
+        old_rect = self.rect.copy()
+        moving   = False
+
+        if keys[pygame.K_LEFT]:
+            self.rect.x -= self.speed; self.dir = "left";  moving = True
         elif keys[pygame.K_RIGHT]:
-            self.rect.x+=self.speed
-            self.dir="right"
-            moving=True
+            self.rect.x += self.speed; self.dir = "right"; moving = True
         elif keys[pygame.K_UP]:
-            self.rect.y-=self.speed
-            self.dir="up"
-            moving=True
+            self.rect.y -= self.speed; self.dir = "up";    moving = True
         elif keys[pygame.K_DOWN]:
-            self.rect.y+=self.speed
-            self.dir="down"
-            moving=True
-        for o in obs:
+            self.rect.y += self.speed; self.dir = "down";  moving = True
+
+        # colisão retangular com obstaculos
+        for o in obstaculos:
             if self.rect.colliderect(o.rect):
-                self.rect=old
+                self.rect = old_rect
                 break
-        self.rect.clamp_ip(pygame.Rect(0,0,LARGURA,ALTURA))
-        self.idx=(self.idx+0.15)%len(self.anim[self.dir]) if moving else 0
-        self.image=self.anim[self.dir][int(self.idx)]
+
+        # mantém dentro da janela
+        self.rect.clamp_ip(pygame.Rect(0, 0, LARGURA, ALTURA))
+
+        # animação
+        seq = self.anim[self.dir]
+        if moving:
+            self.idx = (self.idx + 0.15) % len(seq)
+        else:
+            self.idx = 0
+        self.image = seq[int(self.idx)]
+
+        # colisão pixel-a-pixel com a mask da fase
+        self.mask = pygame.mask.from_surface(self.image)
+        if collision_mask.overlap(self.mask, (self.rect.x, self.rect.y)):
+            self.rect = old_rect
+
+
 
 class NPC(pygame.sprite.Sprite):
     def __init__(self,x,y,image):
@@ -364,67 +397,118 @@ def main():
     quest_target = pygame.Rect(0, ALTURA // 2 - 200, 210, 300)
 
     fases = [
-        {
-            "fundo": load_bg("portaria.png"),
-            "obstaculos": [], "placas": [], "itens": [], "npcs": [],
-            "transicoes": [
-                {"rect": pygame.Rect(0, 0, LARGURA, 5), "dest": 1, "spawn_side": "bottom"}
-            ],
-            "npcs": [porteiro]
-
+    {
+        "fundo": load_bg("portaria.png"),
+        "collision_mask": load_collision_mask_from("portaria.png"),
+        "obstaculos": [],
+        "placas": [],
+        "itens": [],
+        "npcs": [porteiro],
+        "transicoes": [
+            {
+                "rect": pygame.Rect(0, 0, LARGURA, 5),
+                "dest": 1,
+                "spawn_side": "bottom"
+            }
+        ]
+    },
+    {
+        "fundo": load_bg("bolajardim.png"),
+        "collision_mask": load_collision_mask_from("bolajardim.png"),
+        "obstaculos": [],
+        "placas": [],
+        "itens": [],
+        "npcs": [],
+        "transicoes": [
+            {
+                "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
+                "dest": 0,
+                "spawn_side": "top"
+            },
+            {
+                "rect": pygame.Rect(0, 0, LARGURA, 5),
+                "dest": 2,
+                "spawn_side": "bottom"
+            }
+        ]
+    },
+    {
+        "fundo": load_bg("salas1.png"),
+        "collision_mask": load_collision_mask_from("salas1.png"),
+        "obstaculos": [],
+        "placas": [],
+        "itens": [ Item(700, 500, "Caneta") ],
+        "npcs": [ natalie ],
+        "transicoes": [
+        {   # sai pelo rodapé p/ Jardim/Bola
+            "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
+            "dest": 1,
+            "spawn_side": "top"
         },
-        {
-            "fundo": load_bg("bolajardim.png"),
-            "collision_mask": default_mask,  
-            "obstaculos": [], "placas": [], "itens": [], "npcs": [],
-            "quest_target": quest_target,
-            "transicoes": [
-                {"rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5), "dest": 0, "spawn_side": "top"},
-                {"rect": pygame.Rect(0, 0, LARGURA, 5), "dest": 2, "spawn_side": "bottom"}
-            ]
-        },
-        {
-            "fundo": load_bg("salas1.png"),
-            "collision_mask": default_mask,  
-            "obstaculos": [], "placas": [],
-            "itens": [Item(700, 500, "Caneta")],
-            "npcs": [natalie],
-            "transicoes": [
-                {"rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5), "dest": 1, "spawn_side": "top"},
-                {"rect": pygame.Rect(LARGURA - 5, 0, 5, ALTURA), "dest": 3, "spawn_side": "left"}
-            ]
-        },
-        {
-            "fundo": load_bg("salas2.png"),
-            "collision_mask": default_mask,  
-            "obstaculos": [], "placas": [], "itens": [], "npcs": [],
-            "transicoes": [
-                {"rect": pygame.Rect(0, 0, 5, ALTURA), "dest": 2, "spawn_side": "right"},
-                {"rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5), "dest": 4, "spawn_side": "top"}
-            ]
-        },
-        {
-            "fundo": load_bg("jardim2.png"),
-            "collision_mask": default_mask,  
-            "obstaculos": [], 
-            "placas": [], 
-            "itens": [], 
-            # ─── ADDED: Dexter no índice 4 ───
-            "npcs": [dexter],
-            "transicoes": [
-                {"rect": pygame.Rect(0, 0, LARGURA, 5), "dest": 3, "spawn_side": "bottom"},
-                {"rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5), "dest": 5, "spawn_side": "top"}
-            ]
-        },
-        {
-            "fundo": load_bg("corredorfinal.png"),
-            "collision_mask": default_mask,  
-            "obstaculos": [], "placas": [], "itens": [], "npcs": [],
-            "transicoes": [
-                {"rect": pygame.Rect(0, 0, LARGURA, 5), "dest": 4, "spawn_side": "bottom"}
-            ]
+        {   # ➜ NOVO: faixa de 5 px encostada no lado direito
+            "rect": pygame.Rect(LARGURA - 5, 0, 5, ALTURA),
+            "dest": 3,                # índice da salas2
+            "spawn_side": "left"      # o jogador entra pela esquerda
         }
     ]
+    },
+    {
+        "fundo": load_bg("salas2.png"),
+        "collision_mask": load_collision_mask_from("salas2.png"),
+        "obstaculos": [],
+        "placas": [],
+        "itens": [],
+        "npcs": [],
+        "transicoes": [
+            {
+                "rect": pygame.Rect(0, 0, 5, ALTURA),
+                "dest": 2,
+                "spawn_side": "right"
+            },
+            {
+                "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
+                "dest": 4,
+                "spawn_side": "top"
+            }
+        ]
+    },
+    {
+        "fundo": load_bg("jardim2.png"),
+        "collision_mask": load_collision_mask_from("jardim2.png"),
+        "obstaculos": [],
+        "placas": [],
+        "itens": [],
+        "npcs": [ dexter ],
+        "transicoes": [
+            {
+                "rect": pygame.Rect(0, 0, LARGURA, 5),
+                "dest": 3,
+                "spawn_side": "bottom"
+            },
+            {
+                "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),
+                "dest": 5,
+                "spawn_side": "top"
+            }
+        ]
+    },
+    {
+        "fundo": load_bg("corredorfinal.png"),
+        "collision_mask": load_collision_mask_from("corredorfinal.png"),
+        "obstaculos": [],
+        "placas": [],
+        "itens": [],
+        "npcs": [],
+        "transicoes": [
+            {
+                "rect": pygame.Rect(0, 0, LARGURA, 5),
+                "dest": 4,
+                "spawn_side": "bottom"
+            }
+        ]
+    }
+]
+
 
     fase_idx = 0
     ajustar_posicao_inicial(jogador, fases[0]["obstaculos"])
@@ -540,7 +624,9 @@ def main():
 
         keys = pygame.key.get_pressed()
         if not (lendo_placa or quiz_pending or (npc_prox and npc_prox.ativo)):
-            jogador.update(keys, fase["obstaculos"])
+            mask = fase.get("collision_mask", default_mask)
+            jogador.update(keys, fase["obstaculos"], mask)
+
 
         dentro_area_foto = (
             quest_state == "in_progress"
