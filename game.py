@@ -401,7 +401,7 @@ def main():
             "fundo": load_bg("portaria.png"),
             "collision_mask": load_collision_mask_from("portaria.png"),
             "obstaculos": [],
-            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Bem-vindo ao ICEx!\n")],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Bem-vindo ao ICEx!\n Você está na portaria!, do outro lado da rua, temos o prédio da engenharia!\nAqui dentro você vai encontrar salas de aula, laboratórios e nossos lindos jardins!")],
             "itens": [],
             "npcs": [porteiro],
             "transicoes": [
