@@ -124,13 +124,25 @@ class Jogador(pygame.sprite.Sprite):
     def remover(self, nome:str):
         self.inv = [(n, ic) for n, ic in self.inv if n != nome]
 
-    def update(self, keys, obs, collision_mask):
-
-        old=self.rect.copy(); moving=False
-        if keys[pygame.K_LEFT]:  self.rect.x-=self.speed; self.dir="left";  moving=True
-        elif keys[pygame.K_RIGHT]:self.rect.x+=self.speed; self.dir="right"; moving=True
-        elif keys[pygame.K_UP]:  self.rect.y-=self.speed; self.dir="up";    moving=True
-        elif keys[pygame.K_DOWN]:self.rect.y+=self.speed; self.dir="down";  moving=True
+    def update(self,keys,obs):
+        old=self.rect.copy()
+        moving=False
+        if keys[pygame.K_LEFT]:  
+            self.rect.x-=self.speed
+            self.dir="left"
+            moving=True
+        elif keys[pygame.K_RIGHT]:
+            self.rect.x+=self.speed
+            self.dir="right"
+            moving=True
+        elif keys[pygame.K_UP]:
+            self.rect.y-=self.speed
+            self.dir="up"
+            moving=True
+        elif keys[pygame.K_DOWN]:
+            self.rect.y+=self.speed
+            self.dir="down"
+            moving=True
         for o in obs:
             if self.rect.colliderect(o.rect):
                 self.rect=old
@@ -138,12 +150,6 @@ class Jogador(pygame.sprite.Sprite):
         self.rect.clamp_ip(pygame.Rect(0,0,LARGURA,ALTURA))
         self.idx=(self.idx+0.15)%len(self.anim[self.dir]) if moving else 0
         self.image=self.anim[self.dir][int(self.idx)]
-            # atualiza máscara do sprite
-        self.mask = pygame.mask.from_surface(self.image)
-        # se sobrepõe ao vermelho, volta atrás
-        if collision_mask.overlap(self.mask, (self.rect.x, self.rect.y)):
-            self.rect = old
-
 
 class NPC(pygame.sprite.Sprite):
     def __init__(self,x,y,image):
@@ -153,6 +159,8 @@ class NPC(pygame.sprite.Sprite):
         self.falas:list[str]=[]
         self.idx=0
         self.ativo=False
+        # Propriedade para identificar NPCs especiais
+        self.tipo = None
     def iniciar_dialogo(self, falas:list[str]):
         self.falas=falas
         self.idx=0
@@ -274,7 +282,7 @@ def run_dexter_interacao(surface):
     Exibe duas opções: [Fazer carinho] ou [Não fazer].
     Retorna True se o jogador fizer carinho.
     """
-    opcoes = ["Fazer carinho", "Não fazer"]
+    opcoes = ["Fazer carinho", "Ignorá-lo"]
     sel = 0
     while True:
         for e in pygame.event.get():
@@ -330,24 +338,40 @@ def main():
 
     natalie_sprite = load_npc_sprite("frame_13.png", scale=1.25)
     natalie = NPC(9 * LARGURA / 10, 1 * ALTURA / 10, natalie_sprite)
-
+    
     # ─── ADDED: Dexter NPC ───
-    dexter_sprite = load_npc_sprite("frame_3.png", scale=0.035, folder="animacoes3")
+    dexter_sprite = load_npc_sprite("frame_3.png", scale=0.035, folder="animacoes_dexter")
     dexter = NPC(400, 500, dexter_sprite)
+    # Marca o Dexter como um NPC especial
+    dexter.tipo = "dexter"
     dexter_interacted = False
+
+    # Load single porteiro image
+    single_sprite = load_npc_sprite("frame_13.png", folder="animacoes3", scale=1.4)
+
+    # Create a new surface to hold two sprites stacked vertically with padding
+    padding = 10
+    w, h = single_sprite.get_size()
+    combined_sprite = pygame.Surface((w, h * 2 + padding), pygame.SRCALPHA)
+    combined_sprite.blit(single_sprite, (0, 0))
+    combined_sprite.blit(single_sprite, (0, h + padding))
+
+    # Create NPC with combined sprite
+    porteiro = NPC(330, 530, combined_sprite)
+
+
 
     quest_target = pygame.Rect(0, ALTURA // 2 - 200, 210, 300)
 
     fases = [
         {
-            "fundo":       load_bg("portaria.png"),
-            "collision_mask": portaria_collision_mask,   # ← aqui
-            "obstaculos":  [],
-            "placas":      [],
-            "itens":       [],
-            "npcs":        [],
-            "transicoes":  [ { "rect": pygame.Rect(0,0,LARGURA,5),
-                            "dest": 1, "spawn_side": "bottom" } ]
+            "fundo": load_bg("portaria.png"),
+            "obstaculos": [], "placas": [], "itens": [], "npcs": [],
+            "transicoes": [
+                {"rect": pygame.Rect(0, 0, LARGURA, 5), "dest": 1, "spawn_side": "bottom"}
+            ],
+            "npcs": [porteiro]
+
         },
         {
             "fundo": load_bg("bolajardim.png"),
@@ -436,61 +460,77 @@ def main():
                     texto_placa = placa_prox.texto
                 elif ev.key == pygame.K_RETURN and lendo_placa:
                     lendo_placa = False
-                # ─── Interação com Natalie ───
-                elif ev.key == pygame.K_e and npc_prox and npc_prox is natalie and not natalie.ativo and not lendo_placa:
-                    if quest_state == "not_started":
-                        falas = [
-                            "Natalie! Que bom que você está aqui, tenho uma prova agora,\npreciso muito de uma caneta emprestada…",
-                            "N: Oi meu amor, eu tenho uma caneta da boa bem aqui, mas antes,\npreciso que você me ajude: tire uma foto na bola do ICEx!",
-                            "N: Depois, volte aqui e me mostre!",
-                            "Ok, vou tirar a foto e já volto!",
-                            "N: Ah, e não esquece de pegar a câmera na minha mochila!"
-                        ]
-                        natalie.iniciar_dialogo(falas)
-                    elif quest_state == "in_progress":
-                        natalie.iniciar_dialogo(["Você ainda não tirou a foto!"])
-                    elif quest_state == "photo_taken":
-                        natalie.iniciar_dialogo(["Uau, ficou ótima!", "Aqui está sua caneta 🖊️", "Boa prova!"])
-                        jogador.remover("Camera")
-                        jogador.coletar(Item(0, 0, "Caneta"))
-                        item_msg = "🖊️ Caneta adicionada ao inventário!"
-                        item_timer = time.time()
-                        quest_state = "done"
-                    else:
-                        natalie.iniciar_dialogo(["Boa sorte na prova!"])
-                elif ev.key == pygame.K_RETURN and npc_prox and npc_prox is natalie and natalie.ativo:
-                    natalie.avancar_dialogo()
-                    if not natalie.ativo and quest_state == "not_started":
-                        jogador.coletar(Item(0, 0, "Camera"))
-                        item_msg = "📷 Câmera adicionada ao inventário!"
-                        item_timer = time.time()
-                        quest_state = "in_progress"
-                # ─── Interação com Dexter ───
-                elif (
-                    ev.key == pygame.K_e
-                    and npc_prox
-                    and npc_prox is dexter
-                    and not dexter.ativo
-                    and not lendo_placa
-                    and not dexter_interacted
-                ):
-                    # Abre a escolha de fazer carinho
-                    fez_carinho = run_dexter_interacao(tela)
-                    if fez_carinho:
-                        item = Item(0, 0, "ResumoED")
-                        jogador.coletar(item)
-                        item_msg = "📄 Resumo ED adicionado ao inventário!"
-                        # Adiciona 30 de conhecimento (máx. 100):
-                        jogador.conhecimento = min(jogador.conhecimento + 30, 100)
-                        # Aviso mais chamativo:
-                        evento_txt = "⚡ PARABÉNS! +30 CONHECIMENTO! Você ganhou o resumo do Dexter!"
+                elif ev.key == pygame.K_e and npc_prox and not npc_prox.ativo and not lendo_placa:
+                    # Tratando interação específica com o Dexter
+                    if npc_prox.tipo == "dexter" and not dexter_interacted:
+                        fez_carinho = run_dexter_interacao(tela)
+                        if fez_carinho:
+                            jogador.conhecimento = min(jogador.conhecimento + 25, 100)
+                            evento_txt = "+25 conhecimento! Dexter está feliz!"
+                            npc_prox.iniciar_dialogo(["Dexter está feliz com o carinho! Ele te entregou o resumo de ED que estava mastigando!", 
+                                                     "Você ganhou +25 de conhecimento!"])
+                            jogador.coletar(Item(0, 0, "Resumo de ED"))
+                        else:
+                            evento_txt = "Dexter parece um pouco triste..."
+                            npc_prox.iniciar_dialogo(["Dexter parece triste por não receber carinho."])
                         evento_timer = time.time()
                         dexter_interacted = True
-                        dexter.kill()  # Dexter some após interação
-                    else:
-                        evento_txt = "Dexter ficou triste e não te deu nada..."
-                        evento_timer = time.time()
-                        dexter_interacted = True
+                    elif npc_prox == porteiro:
+                        porteiro.iniciar_dialogo([
+                            "P: Bom dia, estudante!",
+                            "Bom dia Porteiro! Estou indo para a prova.",
+                            "Eu esqueci minha carteirinha, posso entrar?",
+                            "P: Não pode entrar sem carteirinha!",
+                            "P: Como vou saber se você é estudante?",
+                            "Não se preocupe, eu sou estudante sim! Eu posso provar!",
+                            "P: Então prove! Responda a esse quiz sobre o ICEx e a UFMG.",
+                            "P: Só um verdadeiro estudante consegue passar!",
+                            "Estou pronto!"
+                        ])
+
+                    elif npc_prox == natalie:
+                        if quest_state == "not_started":
+                            falas = [
+                                "Natalie! Que bom que você está aqui, tenho uma prova agora,\npreciso muito de uma caneta emprestada…",
+                                "N: Oi meu amor, eu tenho uma caneta da boa bem aqui, mas antes,\npreciso que você me ajude: tire uma foto na bola do ICEx!",
+                                "N: Depois, volte aqui e me mostre!",
+                                "Ok, vou tirar a foto e já volto!",
+                                "N: Ah, e não esquece de pegar a câmera na minha mochila!"
+                            ]
+                            natalie.iniciar_dialogo(falas)
+
+                        elif quest_state == "in_progress":
+                            natalie.iniciar_dialogo(["Você ainda não tirou a foto!"])
+
+                        elif quest_state == "photo_taken":
+                            natalie.iniciar_dialogo([
+                                "Uau, ficou ótima!",
+                                "Aqui está sua caneta 🖊️",
+                                "Boa prova!"
+                            ])
+
+                        else:
+                            natalie.iniciar_dialogo(["Boa sorte na prova!"])
+                elif ev.key == pygame.K_RETURN and npc_prox and npc_prox.ativo:
+                    npc_prox.avancar_dialogo()
+
+                    if npc_prox == natalie and not npc_prox.ativo:
+                        if quest_state == "not_started":
+                            jogador.coletar(Item(0, 0, "Camera"))
+                            item_msg = "📷 Câmera adicionada ao inventário!"
+                            item_timer = time.time()
+                            quest_state = "in_progress"
+
+                        elif quest_state == "photo_taken":
+                            jogador.remover("Camera")
+                            jogador.coletar(Item(0, 0, "Caneta"))
+                            item_msg = "🖊️ Caneta adicionada ao inventário!"
+                            item_timer = time.time()
+                            quest_state = "done"
+
+
+                elif ev.key == pygame.K_q:
+                    quiz_pending = True
 
         fase = fases[fase_idx]
         grupo_obs = pygame.sprite.Group(*fase["obstaculos"])
@@ -500,8 +540,7 @@ def main():
 
         keys = pygame.key.get_pressed()
         if not (lendo_placa or quiz_pending or (npc_prox and npc_prox.ativo)):
-            jogador.update(keys, fase["obstaculos"], fase["collision_mask"])
-
+            jogador.update(keys, fase["obstaculos"])
 
         dentro_area_foto = (
             quest_state == "in_progress"
@@ -551,7 +590,20 @@ def main():
             pygame.draw.rect(tela, (255, 255, 0), fase["quest_target"], 2)
 
         placa_prox = next((p for p in grupo_pla if jogador.rect.colliderect(p.rect.inflate(40, 40))), None)
-        npc_prox = next((n for n in grupo_npc if jogador.rect.colliderect(n.rect.inflate(50, 50))), None)
+        npc_prox = None
+        for npc in grupo_npc:
+            if npc == porteiro:
+                # Only for the doorman: interaction zone to the right
+                interact_zone = pygame.Rect(npc.rect.right + 100, npc.rect.top, 60, npc.rect.height)
+                if jogador.rect.colliderect(interact_zone):
+                    npc_prox = npc
+                    break
+            else:
+                # Default interaction zone for other NPCs
+                if jogador.rect.colliderect(npc.rect.inflate(50, 50)):
+                    npc_prox = npc
+                    break
+
 
         if (placa_prox or npc_prox) and not lendo_placa and not (npc_prox and npc_prox.ativo):
             txt = "Pressione E para interagir"
