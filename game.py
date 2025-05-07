@@ -268,7 +268,7 @@ QUESTOES=[
 ]
 
 def run_quiz(surface) -> tuple[int, bool]:
-    perguntas = random.sample(QUESTOES, 3)
+    perguntas = random.sample(QUESTOES, 5)
     acertos = 0
     for q in perguntas:
         sel, done = 0, False
@@ -436,7 +436,7 @@ def main():
         "collision_mask": load_collision_mask_from("salas1.png"),
         "obstaculos": [],
         "placas": [],
-        "itens": [ Item(700, 500, "Caneta") ],
+        "itens": [],
         "npcs": [ natalie ],
         "transicoes": [
         {   # sai pelo rodapé p/ Jardim/Bola
@@ -591,7 +591,7 @@ def main():
                         elif quest_state == "photo_taken":
                             natalie.iniciar_dialogo([
                                 "Uau, ficou ótima!",
-                                "Aqui está sua caneta 🖊️",
+                                "Aqui está sua caneta",
                                 "Boa prova!"
                             ])
 
@@ -599,18 +599,22 @@ def main():
                             natalie.iniciar_dialogo(["Boa sorte na prova!"])
                 elif ev.key == pygame.K_RETURN and npc_prox and npc_prox.ativo:
                     npc_prox.avancar_dialogo()
+                    
+                        # Trigger quiz right after porteiro finishes speaking
+                    if npc_prox == porteiro and not npc_prox.ativo:
+                        quiz_pending = True
 
                     if npc_prox == natalie and not npc_prox.ativo:
                         if quest_state == "not_started":
                             jogador.coletar(Item(0, 0, "Camera"))
-                            item_msg = "📷 Câmera adicionada ao inventário!"
+                            item_msg = "Câmera adicionada ao inventário!"
                             item_timer = time.time()
                             quest_state = "in_progress"
 
                         elif quest_state == "photo_taken":
                             jogador.remover("Camera")
                             jogador.coletar(Item(0, 0, "Caneta"))
-                            item_msg = "🖊️ Caneta adicionada ao inventário!"
+                            item_msg = "Caneta adicionada ao inventário!"
                             item_timer = time.time()
                             quest_state = "done"
 
@@ -659,16 +663,17 @@ def main():
                 ajustar_posicao_inicial(jogador, next_fase["obstaculos"])
                 break
 
+        # ✅ Run quiz ONLY if quiz_pending was triggered (via 'Q' or interaction)
+        if quiz_pending:
             acertos, passou = run_quiz(tela)
             ganho = acertos * 10
             jogador.conhecimento = min(jogador.conhecimento + ganho, 100)
             if passou:
-                evento_txt = f"{acertos}/3 corretas! Você pode entrar! +{ganho} conhecimento!"
+                evento_txt = f"{acertos}/5 corretas! Você pode entrar! +{ganho} conhecimento!"
             else:
-                evento_txt = f"{acertos}/3 corretas. Tente novamente!"
+                evento_txt = f"{acertos}/5 corretas. Tente novamente!"
             evento_timer = time.time()
-
-            quiz_pending=False
+            quiz_pending = False
 
         tela.blit(fase["fundo"], (0, 0))
         grupo_obs.draw(tela)
@@ -725,15 +730,20 @@ def main():
             tela.blit(pygame.transform.scale(WOOD_IMG, (caixa.width, caixa.height)), caixa.topleft)
             pygame.draw.rect(tela, PRETO, caixa, 3)
             for i, linha in enumerate(texto_placa.split("\\n")):
-                tela.blit(fonte_dialog.render(linha, True, PRETO), (120, 620 + i * 28))
+                rendered = render_text_with_border(linha, PRETO, BRANCO, fonte_dialog, border_size=2)
+                tela.blit(rendered, (caixa.x + 20, caixa.y + 50 + i * 36))
+
 
         if npc_prox and npc_prox.ativo:
             caixa = pygame.Rect(80, 580, 1040, 160)
             tela.blit(pygame.transform.scale(WOOD_IMG, (caixa.width, caixa.height)), caixa.topleft)
             pygame.draw.rect(tela, PRETO, caixa, 3)
+            
             linha = npc_prox.falas[npc_prox.idx]
             for i, parte in enumerate(linha.split("\n")):
-                tela.blit(fonte_dialog.render(parte, True, PRETO), (caixa.x + 20, caixa.y + 50 + i * 28))
+                rendered = render_text_with_border(parte, PRETO, BRANCO, fonte_dialog, border_size=1.2)
+                tela.blit(rendered, (caixa.x + 20, caixa.y + 50 + i * 36))
+
 
         desenhar_inventario(tela, jogador.inv, inv_current_y)
         desenhar_barra_conhecimento(tela,jogador.conhecimento)
