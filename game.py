@@ -351,6 +351,8 @@ def ajustar_posicao_inicial(j,obs):
                 break
 
 def main():
+    fullscreen = False
+    global tela
     inv_visible   = False
     inv_speed     = 600
     SLOT_SIZE     = 48
@@ -516,6 +518,14 @@ def main():
 
                 elif ev.key == pygame.K_i:
                     inv_visible = not inv_visible
+                    
+                elif ev.key == pygame.K_F11:
+                    fullscreen = not fullscreen
+                    if fullscreen:
+                        tela = pygame.display.set_mode((LARGURA, ALTURA), pygame.FULLSCREEN)
+                    else:
+                        tela = pygame.display.set_mode((LARGURA, ALTURA))
+
 
                 # ── Interações com NPCs ──
                 elif ev.key == pygame.K_e and npc_prox and not npc_prox.ativo and not lendo_placa:
@@ -701,6 +711,8 @@ def main():
                 evento_txt = f"{acertos}/5 corretas! +{ganho} conhecimento! Portão liberado!"
             else:
                 evento_txt = f"{acertos}/5 corretas. Tente de novo!"
+                #zere o conhecimento
+                jogador.conhecimento = 0
 
             evento_timer = time.time()
             quiz_pending = False
