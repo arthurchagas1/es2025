@@ -16,10 +16,10 @@ AZUL_CLARO      = (150,200,255)
 # ────── FONTE PIXEL ──────
 PIXEL_FONT = "fonts/PressStart2P-Regular.ttf"   # ajuste se necessário
 try:
-    fonte_dialog = pygame.font.Font(PIXEL_FONT, 20)
+    fonte_dialog = pygame.font.Font(PIXEL_FONT, 30)
 except FileNotFoundError:
     print("⚠️  Fonte PressStart2P não encontrada – usando sistema.")
-    fonte_dialog = pygame.font.Font(None, 20)
+    fonte_dialog = pygame.font.Font(None, 30)
 
 fonte_hud = pygame.font.SysFont("Arial", 20)    # apenas HUD (inventário, ESC)
 
@@ -263,7 +263,7 @@ def main():
     natalie = NPC(9*LARGURA/10, 1*ALTURA/10, natalie_sprite)
 
     # área da “Bola do ICEx” (região circular central)
-    quest_target = pygame.Rect(LARGURA//2-60, ALTURA//2-60, 120,120)
+    quest_target = pygame.Rect(0, ALTURA//2-200, 210,300)
 
     fases = [
         # 0 ── PORTARIA
@@ -287,6 +287,7 @@ def main():
             "placas"     : [],
             "itens"      : [],
             "npcs"       : [],
+            "quest_target": quest_target,
             "transicoes" : [
                 { "rect": pygame.Rect(0, ALTURA-5, LARGURA, 5),        # base
                   "dest": 0,        # retorna à portaria
@@ -299,17 +300,68 @@ def main():
         },
 
         # 2 ── SALAS 1
+# 2 ── SALAS 1
         {
-            "fundo"      : load_bg("salas1.png"),
-            "obstaculos" : [],
-            "placas"     : [],
-            "itens"      : [Item(700, 500, "Caneta")],
-            "npcs"       : [natalie],
-            "quest_target": quest_target,
-            "transicoes" : [
-                { "rect": pygame.Rect(0, ALTURA-5, LARGURA, 5),        # base
-                  "dest": 1,        # volta para bolajardim
+            "fundo": load_bg("salas1.png"),
+            "obstaculos": [],
+            "placas": [],
+            "itens": [Item(700, 500, "Caneta")],
+            "npcs": [natalie],
+            "transicoes": [
+                { "rect": pygame.Rect(0, ALTURA-5, LARGURA, 5),
+                "dest": 1,
+                "spawn_side": "top" },
+                { "rect": pygame.Rect(LARGURA - 5, 0, 5, ALTURA),    # borda direita
+                "dest": 3,
+                "spawn_side": "left" }
+            ]
+        },
+
+                # 3 ── SALAS 2 (nova fase à direita de salas1)
+        {
+            "fundo": load_bg("salas2.png"),
+            "obstaculos": [],
+            "placas": [],
+            "itens": [],
+            "npcs": [],
+            "transicoes": [
+                { "rect": pygame.Rect(0, 0, 5, ALTURA),    # esquerda → salas1
+                "dest": 2,
+                "spawn_side": "right" },
+                { "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),   # baixo → jardim2
+                "dest": 4,
+                "spawn_side": "top" }
+            ]
+
+        },
+                # 4 ── JARDIM 2 (abaixo de salas2)
+        {
+            "fundo": load_bg("jardim2.png"),
+            "obstaculos": [],
+            "placas": [],
+            "itens": [],
+            "npcs": [],
+            "transicoes": [
+                { "rect": pygame.Rect(0, 0, LARGURA, 5),    # borda superior
+                  "dest": 3,
+                  "spawn_side": "bottom" },
+                { "rect": pygame.Rect(0, ALTURA - 5, LARGURA, 5),    # borda inferior
+                  "dest": 5,
                   "spawn_side": "top" }
+            ]
+        },
+
+        # 5 ── CORREDOR FINAL (abaixo de jardim2)
+        {
+            "fundo": load_bg("corredorfinal.png"),
+            "obstaculos": [],
+            "placas": [],
+            "itens": [],
+            "npcs": [],
+            "transicoes": [
+                { "rect": pygame.Rect(0, 0, LARGURA, 5),    # borda superior
+                  "dest": 4,
+                  "spawn_side": "bottom" }
             ]
         }
     ]
@@ -385,13 +437,18 @@ def main():
         keys=pygame.key.get_pressed()
         if not (lendo_placa or quiz_pending or (npc_prox and npc_prox.ativo)):
             jogador.update(keys,fase["obstaculos"])
+                
+        # ─────── QUEST: tirar a foto manualmente ───────
+        dentro_area_foto = (
+            quest_state == "in_progress"
+            and "quest_target" in fase
+            and jogador.rect.colliderect(fase["quest_target"])
+        )
 
-        # quest: checar foto
-        if quest_state=="in_progress" and "quest_target" in fase:
-            if jogador.rect.colliderect(fase["quest_target"]):
-                quest_state="photo_taken"
-                evento_txt="📸 Foto tirada! Volte para Natalie."
-                evento_timer=time.time()
+        if dentro_area_foto and keys[pygame.K_f]:
+            quest_state = "photo_taken"
+            evento_txt = "📸 Foto tirada! Volte para Natalie."
+            evento_timer = time.time()
 
         # transição de fase
         # ──────── TRANSIÇÕES ENTRE FASES ────────
@@ -439,9 +496,34 @@ def main():
         placa_prox=next((p for p in grupo_pla if jogador.rect.colliderect(p.rect.inflate(40,40))),None)
         npc_prox  =next((n for n in grupo_npc if jogador.rect.colliderect(n.rect.inflate(50,50))),None)
 
+        # -------- prompt de interação --------
         if (placa_prox or npc_prox) and not lendo_placa and not (npc_prox and npc_prox.ativo):
-            tela.blit(fonte_dialog.render("Pressione E para interagir",True,PRETO),
-                      (jogador.rect.x-80,jogador.rect.y-40))
+            txt = "Pressione E para interagir"
+            surf_txt  = fonte_dialog.render(txt, True, PRETO)
+            w, h      = surf_txt.get_size()
+            bg_rect   = pygame.Rect(0, 0, w + 20, h + 10)
+            bg_rect.midbottom = (jogador.rect.centerx, jogador.rect.y - 10)
+
+            # janela semi‑transparente
+            box = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+            box.fill((255, 255, 255, 200))   # branco, 80 % opaco
+            tela.blit(box, bg_rect.topleft)
+            pygame.draw.rect(tela, PRETO, bg_rect, 2)  # borda
+            tela.blit(surf_txt, (bg_rect.x + 10, bg_rect.y + 5))
+
+        # -------- dica de foto (quando dentro da área) --------
+        if dentro_area_foto:
+            txt = "Pressione F para tirar foto"
+            surf_txt = fonte_dialog.render(txt, True, PRETO)
+            w, h = surf_txt.get_size()
+            bg_rect = pygame.Rect(0, 0, w + 20, h + 10)
+            bg_rect.midbottom = (jogador.rect.centerx, jogador.rect.y - 50)
+
+            box = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+            box.fill((255, 255, 255, 200))
+            tela.blit(box, bg_rect.topleft)
+            pygame.draw.rect(tela, PRETO, bg_rect, 2)
+            tela.blit(surf_txt, (bg_rect.x + 10, bg_rect.y + 5))
 
         # placa
         if lendo_placa:
@@ -456,15 +538,28 @@ def main():
             caixa=pygame.Rect(80,580,1040,160)
             tela.blit(pygame.transform.scale(WOOD_IMG,(caixa.width,caixa.height)),caixa.topleft)
             pygame.draw.rect(tela,PRETO,caixa,3)
-            linha=npc_prox.falas[npc_prox.idx]
-            tela.blit(fonte_dialog.render(linha,True,PRETO),(caixa.x+20,caixa.y+50))
+            linha = npc_prox.falas[npc_prox.idx]
+            for i, parte in enumerate(linha.split("\n")):
+                tela.blit(fonte_dialog.render(parte, True, PRETO),
+                        (caixa.x + 20, caixa.y + 50 + i * 28))  # adjust spacing for large font
+
 
         desenhar_inventario(tela,jogador.inv)
 
-        if evento_txt and time.time()-evento_timer<3:
-            tela.blit(fonte_dialog.render(evento_txt,True,PRETO),
-                      ((LARGURA-fonte_dialog.size(evento_txt)[0])//2,40))
-        elif time.time()-evento_timer>=3: evento_txt=""
+        if evento_txt and time.time() - evento_timer < 3:
+            surf_txt = fonte_dialog.render(evento_txt, True, PRETO)
+            w, h = surf_txt.get_size()
+            bg_rect = pygame.Rect(0, 0, w + 40, h + 20)
+            bg_rect.center = (LARGURA // 2, 80)
+
+            box = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+            box.fill((255, 255, 255, 230))  # slightly more opaque for visibility
+            tela.blit(box, bg_rect.topleft)
+            pygame.draw.rect(tela, PRETO, bg_rect, 2)
+            tela.blit(surf_txt, (bg_rect.x + 20, bg_rect.y + 10))
+        elif time.time() - evento_timer >= 3:
+            evento_txt = ""
+
 
         ESC_FONT = pygame.font.Font("PressStart2P.ttf", 16)
         # desenha "Esc – Pausa/Config." com a fonte PressStart2P e borda preta
