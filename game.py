@@ -371,7 +371,7 @@ def main():
 
 
     natalie_sprite = load_npc_sprite("frame_13.png", scale=1.25)
-    natalie = NPC(9 * LARGURA / 10, 1 * ALTURA / 9, natalie_sprite)
+    natalie = NPC(9 * LARGURA / 10, 1 * ALTURA / 8, natalie_sprite)
     
     # ─── ADDED: Dexter NPC ───
     dexter_sprite = load_npc_sprite("frame_3.png", scale=0.035, folder="animacoes_dexter")
@@ -458,7 +458,7 @@ def main():
             "fundo": load_bg("salas2.png"),
             "collision_mask": load_collision_mask_from("salas2.png"),
             "obstaculos": [],
-            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Mais salas! Acima, também temos outra portaria, que da acesso a praça de serviços\ne a outros prédios, como o ICB! (A cantinha de lá é muito boa! Tem churros e saguado!)")],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2-50, "Mais salas! Acima, também temos outra portaria, que da acesso a praça de serviços\ne a outros prédios, como o ICB! (A cantinha de lá é muito boa! Tem churros e saguado!)")],
             "itens": [],
             "npcs": [],
             "transicoes": [
@@ -478,7 +478,7 @@ def main():
             "fundo": load_bg("jardim2.png"),
             "collision_mask": load_collision_mask_from("jardim2.png"),
             "obstaculos": [],
-            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Um lugar tranquilo...\nDexter está por aqui.")],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Mais um lugar tranquilo para descansar e devagar sobreo sentido da vida.\ncomo disse Sócrates: 'Uma vida não examinada não vale a pena ser vivida.....'\nO que estou dizendo? A prova de ED é em alguns minutos! Melhor ir logo!"),],
             "itens": [],
             "npcs": [dexter],
             "transicoes": [
