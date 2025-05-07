@@ -366,10 +366,12 @@ def main():
     anim        = load_animation_frames()
     jogador     = Jogador(anim)
     grupo_jog   = pygame.sprite.Group(jogador)
+    jogador.rect.midbottom = (LARGURA // 2, ALTURA - 50)
+
 
 
     natalie_sprite = load_npc_sprite("frame_13.png", scale=1.25)
-    natalie = NPC(9 * LARGURA / 10, 1 * ALTURA / 10, natalie_sprite)
+    natalie = NPC(9 * LARGURA / 10, 1 * ALTURA / 9, natalie_sprite)
     
     # ─── ADDED: Dexter NPC ───
     dexter_sprite = load_npc_sprite("frame_3.png", scale=0.035, folder="animacoes_dexter")
@@ -400,7 +402,7 @@ def main():
             "fundo": load_bg("portaria.png"),
             "collision_mask": load_collision_mask_from("portaria.png"),
             "obstaculos": [],
-            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Bem-vindo ao ICEx!\n Você está na portaria!, do outro lado da rua, temos o prédio da engenharia!\nAqui dentro você vai encontrar salas de aula, laboratórios e nossos lindos jardins!")],
+            "placas": [Placa(LARGURA // 2, ALTURA / 3, "Bem-vindo ao ICEx!\nVocê está na portaria principal!, do outro lado da rua, temos o prédio da engenharia!\nAqui dentro você vai encontrar salas de aula, laboratórios e nossos lindos jardins!")],
             "itens": [],
             "npcs": [porteiro],
             "transicoes": [
@@ -415,7 +417,7 @@ def main():
             "fundo": load_bg("bolajardim.png"),
             "collision_mask": load_collision_mask_from("bolajardim.png"),
             "obstaculos": [],
-            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Este é o famoso jardim da bola!")],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Este é o famoso jardim da bola do ICEx, aqui você pode descansar,\nencontrar amigos e aproveitar a fauna a a flora nativa!")],
             "itens": [],
             "quest_target": quest_target,
             "npcs": [],
@@ -436,7 +438,7 @@ def main():
             "fundo": load_bg("salas1.png"),
             "collision_mask": load_collision_mask_from("salas1.png"),
             "obstaculos": [],
-            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Salas de aula – Encontre Natalie!")],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2-50, "Aqui são as salas de aula do ICEx,\nonde você vai passar a maior parte do seu tempo!\nQuem é aquela mulher ali? Melhor ir lá descobrir!")],
             "itens": [],
             "npcs": [natalie],
             "transicoes": [
@@ -456,7 +458,7 @@ def main():
             "fundo": load_bg("salas2.png"),
             "collision_mask": load_collision_mask_from("salas2.png"),
             "obstaculos": [],
-            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Mais salas – Continue explorando!")],
+            "placas": [Placa(LARGURA // 2, ALTURA // 2, "Mais salas! Acima, também temos outra portaria, que da acesso a praça de serviços\ne a outros prédios, como o ICB! (A cantinha de lá é muito boa! Tem churros e saguado!)")],
             "itens": [],
             "npcs": [],
             "transicoes": [
@@ -742,20 +744,20 @@ def main():
         if lendo_placa:
             caixa = pygame.Rect(100, 600, 1000, 150)
             tela.blit(pygame.transform.scale(WOOD_IMG, (caixa.width, caixa.height)), caixa.topleft)
-            pygame.draw.rect(tela, PRETO, caixa, 3)
-            for i, linha in enumerate(texto_placa.split("\\n")):
-                rendered = render_text_with_border(linha, PRETO, BRANCO, fonte_dialog, border_size=2)
-                tela.blit(rendered, (caixa.x + 20, caixa.y + 50 + i * 36))
+            pygame.draw.rect(tela, BRANCO, caixa, 3)
+            for i, linha in enumerate(texto_placa.split("\n")):
+                rendered = render_text_with_border(linha, BRANCO, PRETO, fonte_dialog, border_size=1.2)
+                tela.blit(rendered, (caixa.x + 20, caixa.y + 20 + i * 36))
 
 
         if npc_prox and npc_prox.ativo:
             caixa = pygame.Rect(80, 580, 1040, 160)
             tela.blit(pygame.transform.scale(WOOD_IMG, (caixa.width, caixa.height)), caixa.topleft)
-            pygame.draw.rect(tela, PRETO, caixa, 3)
+            pygame.draw.rect(tela, BRANCO, caixa, 3)
             
             linha = npc_prox.falas[npc_prox.idx]
             for i, parte in enumerate(linha.split("\n")):
-                rendered = render_text_with_border(parte, PRETO, BRANCO, fonte_dialog, border_size=1.2)
+                rendered = render_text_with_border(parte, BRANCO, PRETO, fonte_dialog, border_size=1.2)
                 tela.blit(rendered, (caixa.x + 20, caixa.y + 50 + i * 36))
 
 
