@@ -29,6 +29,9 @@ ICON_FAIL = pygame.transform.scale(pygame.image.load("fail.png").convert_alpha()
 
 # ───────── COLISÃO PIXEL-A-PIXEL: PORTARIA ─────────
 raw_portaria_mask   = pygame.image.load("portaria_mask.png").convert()
+# máscara “vazia” (nunca colide)
+default_mask = pygame.mask.Mask((LARGURA, ALTURA), fill=False)
+
 portaria_mask_surf  = pygame.transform.scale(raw_portaria_mask, (LARGURA, ALTURA))
 # tol = (50,50,50) → considera qualquer tom 'quase-vermelho'
 portaria_collision_mask = pygame.mask.from_threshold(
@@ -348,6 +351,7 @@ def main():
         },
         {
             "fundo": load_bg("bolajardim.png"),
+            "collision_mask": default_mask,  
             "obstaculos": [], "placas": [], "itens": [], "npcs": [],
             "quest_target": quest_target,
             "transicoes": [
@@ -357,6 +361,7 @@ def main():
         },
         {
             "fundo": load_bg("salas1.png"),
+            "collision_mask": default_mask,  
             "obstaculos": [], "placas": [],
             "itens": [Item(700, 500, "Caneta")],
             "npcs": [natalie],
@@ -367,6 +372,7 @@ def main():
         },
         {
             "fundo": load_bg("salas2.png"),
+            "collision_mask": default_mask,  
             "obstaculos": [], "placas": [], "itens": [], "npcs": [],
             "transicoes": [
                 {"rect": pygame.Rect(0, 0, 5, ALTURA), "dest": 2, "spawn_side": "right"},
@@ -375,6 +381,7 @@ def main():
         },
         {
             "fundo": load_bg("jardim2.png"),
+            "collision_mask": default_mask,  
             "obstaculos": [], 
             "placas": [], 
             "itens": [], 
@@ -387,6 +394,7 @@ def main():
         },
         {
             "fundo": load_bg("corredorfinal.png"),
+            "collision_mask": default_mask,  
             "obstaculos": [], "placas": [], "itens": [], "npcs": [],
             "transicoes": [
                 {"rect": pygame.Rect(0, 0, LARGURA, 5), "dest": 4, "spawn_side": "bottom"}
