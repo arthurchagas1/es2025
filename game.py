@@ -399,7 +399,7 @@ def main():
             "collision_mask": load_collision_mask_from("portaria.png"),
             "obstaculos": [],
             "placas": [Placa(LARGURA // 2, ALTURA / 3,
-                     "Bem‑vindo ao ICEx!\nVocê está na portaria principal!, do outro lado da rua, temos o prédio da engenharia!\nAqui dentro você vai encontrar salas de aula, laboratórios e nossos lindos jardins!")],
+                     "Bem vindo ao ICEx!\nVocê está na portaria principal!, do outro lado da rua, temos o prédio da engenharia!\nAqui dentro você vai encontrar salas de aula, laboratórios e nossos lindos jardins!")],
             "itens": [],
             "npcs": [porteiro],
             "transicoes": [{"rect": pygame.Rect(0, 0, LARGURA, 5), "dest": 1, "spawn_side": "bottom"}]
@@ -436,7 +436,7 @@ def main():
             "collision_mask": load_collision_mask_from("salas2.png"),
             "obstaculos": [],
             "placas": [Placa(LARGURA // 2, ALTURA // 2-50,
-                     "Mais salas! Acima, também temos outra portaria, que dá acesso à praça de serviços\ne a outros prédios, como o ICB! (A cantina de lá é muito boa! Tem churros e salgado!)")],
+                     "Mais salas! Acima, também temos outra portaria, que dá acesso à praça de serviços\ne a outros prédios, como o ICB! (A cantina de lá é muito boa! Tem churros e saguado!)")],
             "itens": [],
             "npcs": [],
             "transicoes": [
@@ -536,11 +536,15 @@ def main():
 
                     elif npc_prox == porteiro:
                         porteiro.iniciar_dialogo([
-                            "P: Bom dia!",
-                            "Bom dia! Estou indo para a prova.",
-                            "P: Sem carteirinha não entra!",
-                            "Eu consigo provar que sou aluno — mande o quiz!",
-                            "P: Então responda e prove!"
+                            "P: Bom dia, estudante!",
+                            "Bom dia Porteiro! Estou indo para a prova.",
+                            "Eu esqueci minha carteirinha, posso entrar?",
+                            "P: Não pode entrar sem carteirinha!",
+                            "P: Como vou saber se você é estudante?",
+                            "Não se preocupe, eu sou estudante sim! Eu posso provar!",
+                            "P: Então prove! Responda a esse quiz sobre o ICEx e a UFMG.",
+                            "P: Só um verdadeiro estudante consegue passar!",
+                            "Estou pronto!"
                         ])
 
                     elif npc_prox == natalie:
@@ -670,8 +674,8 @@ def main():
         grupo_obs.draw(tela); grupo_itm.draw(tela)
         grupo_pla.draw(tela); grupo_npc.draw(tela); grupo_jog.draw(tela)
 
-        if quest_state == "in_progress":
-            pygame.draw.rect(tela, (255, 255, 0), quest_target, 2)
+        # if quest_state == "in_progress":
+            # pygame.draw.rect(tela, (255, 255, 0), quest_target, 2)
 
         # Proximidades
         placa_prox = next((p for p in grupo_pla if jogador.rect.colliderect(p.rect.inflate(40, 40))), None)
