@@ -190,25 +190,15 @@ def render_text_with_border(text: str, fg: tuple, border: tuple, font: pygame.fo
     surf.blit(base, (border_size, border_size))
     return surf
 
-def desenhar_inventario(surf, inv):
-    """
-    Desenha o inventário sempre com 5 slots,
-    centralizado horizontalmente e posicionado na parte de baixo da tela,
-    com espaçamento maior entre os itens.
-    """
+def desenhar_inventario(surf, inv, y0):
     slot_size   = 48
     padding     = 16
     total_slots = 5
 
-    # calcula tamanho do painel
     panel_w = total_slots * slot_size + (total_slots + 1) * padding
     panel_h = slot_size + inv_font.get_height() + 3 + 2 * padding
-
-    # posição: meio-x e 10px acima da borda inferior
     x0 = (LARGURA - panel_w) // 2
-    y0 = ALTURA - panel_h - 10
 
-    # desenha o painel de madeira
     painel = pygame.transform.scale(WOOD_IMG, (panel_w, panel_h))
     surf.blit(painel, (x0, y0))
 
@@ -228,6 +218,7 @@ def desenhar_inventario(surf, inv):
             surf.blit(txt, (tx, ty))
 
 
+
 # ───────── QUIZ ─────────
 class QuizQuestion:
     def __init__(self,q,opts,ans):
@@ -236,43 +227,49 @@ class QuizQuestion:
         self.ans=ans
 
 QUESTOES=[
-    QuizQuestion("Quanto é 2 + 2?",["3","4","5","22"],1),
-    QuizQuestion("Qual linguagem estamos usando?",["Java","C++","Python","Ruby"],2),
-    QuizQuestion("Qual planeta é vermelho?",["Terra","Vênus","Marte","Júpiter"],2)
+    QuizQuestion("Quantos cursos são ofertados no ICEx?",["3","10","15","20"],2),
+    QuizQuestion("Quantos departamentos diferentes existem no ICEx?",["2","5","7","10"],1),
+    QuizQuestion("Qual o cachorro que mais fica perambulando pelo prédio do ICEx?",["Banzé","Pretinha","Dexter","Jabuticaba"],2),
+    QuizQuestion("Quem é o diretor do ICEx atualmente?",["Virgilio Almeida", "Reginaldo Santos", "Raquel Prates", "Francisco Dutenhefner"],3),
+    QuizQuestion("Qual a melhor matéria ofertada no ICEx?",["ED","GAAL", "Cálculo I", "Engenharia de Software"],3)
 ]
 
-def run_quiz(surface)->int:
-    perguntas=random.sample(QUESTOES,3)
-    acertos=0
+def run_quiz(surface) -> tuple[int, bool]:
+    perguntas = random.sample(QUESTOES, 3)
+    acertos = 0
     for q in perguntas:
-        sel,done=0,False
+        sel, done = 0, False
         while True:
             for e in pygame.event.get():
-                if e.type==pygame.QUIT:
+                if e.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                if e.type==pygame.KEYDOWN and not done:
-                    if e.key in (pygame.K_UP,pygame.K_w):   
-                        sel=(sel-1)%len(q.opts)
-                    elif e.key in (pygame.K_DOWN,pygame.K_s):
-                        sel=(sel+1)%len(q.opts)
-                    elif e.key==pygame.K_RETURN:
-                        done=True
-                        if sel==q.ans:
-                            acertos+=1
+                if e.type == pygame.KEYDOWN and not done:
+                    if e.key in (pygame.K_UP, pygame.K_w):
+                        sel = (sel - 1) % len(q.opts)
+                    elif e.key in (pygame.K_DOWN, pygame.K_s):
+                        sel = (sel + 1) % len(q.opts)
+                    elif e.key == pygame.K_RETURN:
+                        done = True
+                        if sel == q.ans:
+                            acertos += 1
                         time.sleep(0.4)
-            surface.fill((30,30,90))
-            surface.blit(fonte_dialog.render(q.q,True,BRANCO),(60,80))
-            for i,opt in enumerate(q.opts):
-                y=200+i*60
-                if i==sel:
-                    pygame.draw.rect(surface,AZUL_CLARO,(50,y-5,700,40))
-                surface.blit(fonte_dialog.render(opt,True,BRANCO),(60,y))
+
+            surface.fill((30, 30, 90))
+            surface.blit(fonte_dialog.render(q.q, True, BRANCO), (60, 80))
+            for i, opt in enumerate(q.opts):
+                y = 200 + i * 60
+                if i == sel:
+                    pygame.draw.rect(surface, AZUL_CLARO, (50, y - 5, 700, 40))
+                surface.blit(fonte_dialog.render(opt, True, BRANCO), (60, y))
             pygame.display.flip()
             clock.tick(60)
             if done:
                 break
-    return acertos
+
+    passou = acertos >= 3
+    return acertos, passou
+
 
 # ...existing code...
 
@@ -326,15 +323,17 @@ def main():
     TOTAL_SLOTS = 5
     panel_w = TOTAL_SLOTS * SLOT_SIZE + (TOTAL_SLOTS + 1) * PADDING
     panel_h = SLOT_SIZE + inv_font.get_height() + 3 + 2 * PADDING
-    inv_x0 = (LARGURA - panel_w) // 2
-    inv_hidden_y = ALTURA + 10
+
     inv_visible_y = ALTURA - panel_h - 10
+    inv_hidden_y = ALTURA + 10
     inv_current_y = inv_hidden_y
-    inv_target_y = inv_hidden_y
+
 
     anim = load_animation_frames()
     jogador = Jogador(anim)
+    jogador.rect.midbottom = (LARGURA // 2+20, ALTURA - 50)  # 👈 new position for first phase
     grupo_jog = pygame.sprite.Group(jogador)
+
 
     natalie_sprite = load_npc_sprite("frame_13.png", scale=1.25)
     natalie = NPC(9 * LARGURA / 10, 1 * ALTURA / 10, natalie_sprite)
@@ -460,6 +459,9 @@ def main():
                     texto_placa = placa_prox.texto
                 elif ev.key == pygame.K_RETURN and lendo_placa:
                     lendo_placa = False
+                elif ev.key == pygame.K_i:
+                    inv_visible = not inv_visible
+
                 elif ev.key == pygame.K_e and npc_prox and not npc_prox.ativo and not lendo_placa:
                     # Tratando interação específica com o Dexter
                     if npc_prox.tipo == "dexter" and not dexter_interacted:
@@ -571,12 +573,15 @@ def main():
                 ajustar_posicao_inicial(jogador, next_fase["obstaculos"])
                 break
 
-        if quiz_pending:
-            acertos=run_quiz(tela)
-            ganho=acertos*10
-            jogador.conhecimento=min(jogador.conhecimento+ganho,100)
-            evento_txt = f"+{ganho} conhecimento!" if ganho else "Nenhum acerto..."
-            evento_timer=time.time()
+            acertos, passou = run_quiz(tela)
+            ganho = acertos * 10
+            jogador.conhecimento = min(jogador.conhecimento + ganho, 100)
+            if passou:
+                evento_txt = f"{acertos}/3 corretas! Você pode entrar! +{ganho} conhecimento!"
+            else:
+                evento_txt = f"{acertos}/3 corretas. Tente novamente!"
+            evento_timer = time.time()
+
             quiz_pending=False
 
         tela.blit(fase["fundo"], (0, 0))
@@ -644,7 +649,7 @@ def main():
             for i, parte in enumerate(linha.split("\n")):
                 tela.blit(fonte_dialog.render(parte, True, PRETO), (caixa.x + 20, caixa.y + 50 + i * 28))
 
-        desenhar_inventario(tela, jogador.inv)
+        desenhar_inventario(tela, jogador.inv, inv_current_y)
         desenhar_barra_conhecimento(tela,jogador.conhecimento)
 
         if evento_txt and time.time() - evento_timer < 3:
