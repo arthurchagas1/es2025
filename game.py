@@ -350,22 +350,21 @@ def ajustar_posicao_inicial(j,obs):
                 break
 
 def main():
-    inv_visible = False
-    SLOT_SIZE = 48
-    PADDING = 16
-    TOTAL_SLOTS = 5
+    inv_visible   = False               # inventário começa oculto
+    inv_speed     = 600                 # px/segundo para deslizar
+    SLOT_SIZE     = 48
+    PADDING       = 16
+    TOTAL_SLOTS   = 5
     panel_w = TOTAL_SLOTS * SLOT_SIZE + (TOTAL_SLOTS + 1) * PADDING
     panel_h = SLOT_SIZE + inv_font.get_height() + 3 + 2 * PADDING
-
     inv_visible_y = ALTURA - panel_h - 10
-    inv_hidden_y = ALTURA + 10
+    inv_hidden_y  = ALTURA + 10
     inv_current_y = inv_hidden_y
 
-
-    anim = load_animation_frames()
-    jogador = Jogador(anim)
-    jogador.rect.midbottom = (LARGURA // 2+20, ALTURA - 50)  # 👈 new position for first phase
-    grupo_jog = pygame.sprite.Group(jogador)
+    # ── CONFIGURAÇÕES INICIAIS DO JOGO ──
+    anim        = load_animation_frames()
+    jogador     = Jogador(anim)
+    grupo_jog   = pygame.sprite.Group(jogador)
 
 
     natalie_sprite = load_npc_sprite("frame_13.png", scale=1.25)
@@ -526,7 +525,20 @@ def main():
 
     rodando = True
     while rodando:
-        clock.tick(60)
+        # 1) cálculo de dt
+        dt = clock.tick(60) / 1000.0
+
+        # 2) desliza o inventário para cima ou para baixo
+        target_y = inv_visible_y if inv_visible else inv_hidden_y
+        if inv_current_y < target_y:
+            inv_current_y = min(inv_current_y + inv_speed * dt, target_y)
+        elif inv_current_y > target_y:
+            inv_current_y = max(inv_current_y - inv_speed * dt, target_y)
+
+ 
+
+        
+        # clock.tick(60)
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 pygame.quit()
